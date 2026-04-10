@@ -1,4 +1,4 @@
-from typing import Union, Dict
+from typing import Dict, Optional, Union
 
 import unittest
 import zarr
@@ -179,6 +179,88 @@ class SingleFieldLinearNormalizer(DictOfTensorMixin):
 
 
 
+def _fit_zarr_limits_streaming(
+    arr: zarr.Array,
+    last_n_dims=1,
+    dtype=torch.float32,
+    output_max=1.,
+    output_min=-1.,
+    range_eps=1e-4,
+    fit_offset=True,
+):
+    """Min/max/mean/std over time without loading the full array (RAM-safe for large zarr)."""
+    shape = arr.shape
+    dim = int(np.prod(shape[-last_n_dims:])) if last_n_dims > 0 else 1
+    t_len = shape[0]
+    chunk_t = 4096
+    if arr.chunks is not None and len(arr.chunks) > 0 and arr.chunks[0]:
+        chunk_t = max(chunk_t, int(arr.chunks[0]))
+
+    input_min: Optional[torch.Tensor] = None
+    input_max: Optional[torch.Tensor] = None
+    sum_vec: Optional[torch.Tensor] = None
+    sumsq_vec: Optional[torch.Tensor] = None
+    n_seen = 0
+
+    for start in range(0, t_len, chunk_t):
+        end = min(start + chunk_t, t_len)
+        sl = np.asarray(arr[start:end])
+        x = torch.from_numpy(sl)
+        if dtype is not None:
+            x = x.type(dtype)
+        x = x.reshape(-1, dim)
+        cmin, _ = x.min(axis=0)
+        cmax, _ = x.max(axis=0)
+        if input_min is None:
+            input_min = cmin
+            input_max = cmax
+            sum_vec = x.sum(axis=0)
+            sumsq_vec = (x * x).sum(axis=0)
+            n_seen = x.shape[0]
+        else:
+            input_min = torch.minimum(input_min, cmin)
+            input_max = torch.maximum(input_max, cmax)
+            sum_vec = sum_vec + x.sum(axis=0)
+            sumsq_vec = sumsq_vec + (x * x).sum(axis=0)
+            n_seen += x.shape[0]
+
+    assert input_min is not None and sum_vec is not None and sumsq_vec is not None
+    input_mean = sum_vec / n_seen
+    input_var = sumsq_vec / n_seen - input_mean * input_mean
+    input_std = torch.sqrt(torch.clamp(input_var, min=0.0))
+
+    if fit_offset:
+        input_range = input_max - input_min
+        ignore_dim = input_range < range_eps
+        input_range[ignore_dim] = output_max - output_min
+        scale = (output_max - output_min) / input_range
+        offset = output_min - scale * input_min
+        offset[ignore_dim] = (output_max + output_min) / 2 - input_min[ignore_dim]
+    else:
+        assert output_max > 0
+        assert output_min < 0
+        output_abs = min(abs(output_min), abs(output_max))
+        input_abs = torch.maximum(torch.abs(input_min), torch.abs(input_max))
+        ignore_dim = input_abs < range_eps
+        input_abs[ignore_dim] = output_abs
+        scale = output_abs / input_abs
+        offset = torch.zeros_like(input_mean)
+
+    this_params = nn.ParameterDict({
+        'scale': scale,
+        'offset': offset,
+        'input_stats': nn.ParameterDict({
+            'min': input_min,
+            'max': input_max,
+            'mean': input_mean,
+            'std': input_std,
+        }),
+    })
+    for p in this_params.parameters():
+        p.requires_grad_(False)
+    return this_params
+
+
 def _fit(data: Union[torch.Tensor, np.ndarray, zarr.Array],
         last_n_dims=1,
         dtype=torch.float32,
@@ -193,6 +275,16 @@ def _fit(data: Union[torch.Tensor, np.ndarray, zarr.Array],
 
     # convert data to torch and type
     if isinstance(data, zarr.Array):
+        if mode == 'limits':
+            return _fit_zarr_limits_streaming(
+                data,
+                last_n_dims=last_n_dims,
+                dtype=dtype,
+                output_max=output_max,
+                output_min=output_min,
+                range_eps=range_eps,
+                fit_offset=fit_offset,
+            )
         data = data[:]
     if isinstance(data, np.ndarray):
         data = torch.from_numpy(data)

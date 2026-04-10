@@ -15,8 +15,9 @@ if [ -d "${DEST}/libero10_N500.zarr" ]; then
 fi
 
 echo "Скачивание ${ZIP_NAME} в ${DEST} (несколько попыток при 429)..."
+echo "Подсказка: -C - докачивает частичный .zip после обрыва SSH."
 for i in 1 2 3 4 5; do
-  if curl -L --fail --retry 3 --retry-delay 10 -o "${OUT_Z}" "${URL}"; then
+  if curl -L -C - --fail --retry 3 --retry-delay 10 -o "${OUT_Z}" "${URL}"; then
     break
   fi
   echo "Попытка $i не удалась, жду 60 с..."

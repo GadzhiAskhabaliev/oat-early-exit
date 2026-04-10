@@ -97,6 +97,19 @@ def main():
         )
     OmegaConf.resolve(cfg)
 
+    if "policy" not in cfg:
+        hint = ""
+        if "tokenizer" in cfg:
+            hint = (
+                " You passed an OATTok tokenizer checkpoint (train_oattok). "
+                "Train the policy first: third_party/oat README «Train OAT Policy» "
+                "(train_oatpolicy + policy.action_tokenizer.checkpoint=.../oattok/latest.ckpt), "
+                "then use that policy's checkpoints/latest.ckpt here."
+            )
+        raise RuntimeError(
+            "Checkpoint config has no top-level 'policy' key." + hint
+        )
+
     ws = TrainPolicyWorkspace(cfg, output_dir="/tmp/oat_early_exit_offline", lazy_instantiation=False)
     ws.load_checkpoint(path=args.checkpoint)
 

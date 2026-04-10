@@ -27,13 +27,20 @@ class ZarrDataset(BaseDataset):
         seed: int = 42,
         val_ratio: float = 0.0,
         max_train_episodes: Optional[int] = None,
+        copy_to_memory: bool = True,
     ):
         super().__init__()
         assert n_obs_steps + n_action_steps > 0, "should have at least one frame"
 
-        self.replay_buffer = ReplayBuffer.copy_from_path(
-            zarr_path, keys=[action_key, *obs_keys],
-        )
+        if copy_to_memory:
+            self.replay_buffer = ReplayBuffer.copy_from_path(
+                zarr_path, keys=[action_key, *obs_keys],
+            )
+        else:
+            # Open zarr on disk; much lower RAM than copy_from_path (slower I/O).
+            self.replay_buffer = ReplayBuffer.create_from_path(
+                zarr_path, mode="r"
+            )
         val_mask = get_val_mask(
             n_episodes=self.replay_buffer.n_episodes,
             val_ratio=val_ratio,

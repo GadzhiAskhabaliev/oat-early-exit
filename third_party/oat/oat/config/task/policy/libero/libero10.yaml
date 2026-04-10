@@ -50,6 +50,8 @@ env_runner:
 dataset:
   _target_: oat.dataset.zarr_dataset.ZarrDataset
   zarr_path: data/libero/libero10_N${training.num_demo}.zarr
+  # false = mmap-style read (low RAM); true = full copy into RAM (faster training)
+  copy_to_memory: true
   obs_keys:
     - agentview_rgb
     - robot0_eye_in_hand_rgb
