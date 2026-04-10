@@ -118,7 +118,7 @@ def main():
 
     dataset = hydra.utils.instantiate(cfg.task.policy.dataset)
     val_dataset = dataset.get_validation_dataset()
-    val_cfg = cfg.val_dataloader
+    val_cfg = cfg.val_dataloader if "val_dataloader" in cfg else cfg.dataloader
     if args.batch_size and args.batch_size > 0:
         val_cfg.batch_size = args.batch_size
     val_loader = DataLoader(val_dataset, **val_cfg)

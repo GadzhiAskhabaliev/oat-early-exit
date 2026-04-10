@@ -6,9 +6,7 @@ OAT="${ROOT}/third_party/oat"
 # uv из стандартной установки (curl https://astral.sh/uv/install.sh)
 export PATH="${HOME}/.local/bin:${PATH}"
 
-echo "==> Submodule LIBERO (если ещё не подтянут)"
 cd "${OAT}"
-git submodule update --init --recursive
 
 if command -v uv >/dev/null 2>&1; then
   echo "==> CMake для сборки egl-probe (robomimic): pip-пакет cmake + CMAKE_POLICY_VERSION_MINIMUM"
@@ -31,8 +29,8 @@ else
   exit 1
 fi
 
-echo "==> Зависимости лаборатории (pytest, omegaconf)"
+echo "==> Зависимости лаборатории (pytest, omegaconf) в venv OAT"
 cd "${ROOT}"
-pip install -r requirements.txt
+uv pip install -r requirements.txt --python "${OAT}/.venv/bin/python"
 
 echo "Готово. Baseline: scripts/train_baseline.sh"

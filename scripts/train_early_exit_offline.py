@@ -9,8 +9,8 @@ predict those labels from teacher-forcing LM hidden states.
 Run from repo root (or anywhere) with OAT on the path::
 
     export PATH="$HOME/.local/bin:$PATH"
-    export PYTHONPATH="/abs/path/to/mipt-lab-project/src:/abs/path/to/mipt-lab-project/third_party/oat"
-    cd /abs/path/to/mipt-lab-project/third_party/oat
+    export PYTHONPATH="/abs/path/to/oat-early-exit/src:/abs/path/to/oat-early-exit/third_party/oat"
+    cd /abs/path/to/oat-early-exit/third_party/oat
     uv run python ../../scripts/train_early_exit_offline.py \\
         --checkpoint /path/to/train_oatpolicy/checkpoints/latest.ckpt \\
         --mse-threshold 0.01 \\

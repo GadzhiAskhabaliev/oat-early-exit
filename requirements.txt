@@ -1,6 +1,6 @@
-# Lab extensions (tests, config merge)
+# Lab extensions (tests, config merge). Installed into third_party/oat/.venv by scripts/install_oat.sh
+# — do not add torch here: OAT already pulls torch + CUDA wheels via uv sync (avoids a second huge download).
 omegaconf>=2.3.0
 pytest>=8.0.0
-torch>=2.0.0
 
 # OAT is installed from vendor (prefer uv; see scripts/install_oat.sh and third_party/oat/README.md).

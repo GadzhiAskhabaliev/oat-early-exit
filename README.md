@@ -3,20 +3,7 @@
 # OAT · Adaptive Early Exit
 
 **Learned and heuristic early stopping for autoregressive OAT action tokens**  
-*Extends [OAT](https://github.com/Chaoqi-LIU/oat) with a BLT/H-Net–style compute–quality trade-off at decode time.*
-
-<!-- Badges: CI expects repo at github.com/criptyn97/mipt-lab-project — change paths if your remote differs. -->
-
-[![CI](https://github.com/criptyn97/mipt-lab-project/actions/workflows/ci.yml/badge.svg)](https://github.com/criptyn97/mipt-lab-project/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.0-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)  
-[![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)](https://github.com/criptyn97/mipt-lab-project/actions/workflows/ci.yml)
-[![uv](https://img.shields.io/badge/package%20manager-uv-5A0FC8?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
-[![Hydra](https://img.shields.io/badge/config-Hydra-89b8cd)](https://hydra.cc/)
-[![Docs](https://img.shields.io/badge/docs-early--exit-111827?style=flat&logo=readthedocs&logoColor=white)](docs/early-exit.md)
-[![Upstream OAT](https://img.shields.io/badge/upstream-OAT-111827?style=flat&logo=github)](https://github.com/Chaoqi-LIU/oat)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/criptyn97/mipt-lab-project/pulls)
+*Extends [OAT](https://github.com/Chaoqi-LIU/oat) with an adaptive compute–quality trade-off at decode time.*
 
 ```text
   obs ──► encoder ──► LM + KV cache ──► logits ──► sample
@@ -44,9 +31,8 @@
 
 | Path | Contents |
 |------|----------|
-| `src/oat_ext/` | `EarlyExitGate`, supervision helpers, hooks for dynamic patching / hierarchy |
+| `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
 | `scripts/` | Install, offline gate training, threshold sweeps, `vast_run_early_exit.sh`, `plot_sweep_csv.py`, eval helpers |
-| `configs/hydra_overrides/` | Optional `.env` snippets for baseline / ablation Hydra merges |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
 | `docs/` | `early-exit.md`, `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
@@ -83,7 +69,7 @@ flowchart TB
   D --> F[LIBERO eval optional]
 ```
 
-1. **Train baseline** — upstream configs (GPU recommended; requires LIBERO-10 zarr under `third_party/oat/data/` per `train_baseline.sh` comments):
+1. **Train baseline** — upstream configs (GPU recommended; requires LIBERO-10 zarr under `third_party/oat/data/`):
 
    ```bash
    ./scripts/train_baseline.sh
@@ -95,8 +81,7 @@ flowchart TB
    ./scripts/train_baseline.sh training.num_epochs=1 training.val_every=1 dataloader.batch_size=4
    ```
 
-2. **Train `EarlyExitGate` offline** (reconstruction-supervised).  
-   Default output for [`vast_run_early_exit.sh`](scripts/vast_run_early_exit.sh) is `<repo>/checkpoints/early_exit_gate.pt`; below uses the same path so it matches the Vast section and [docs/results-and-visuals.md](docs/results-and-visuals.md) (you can use `experiments/checkpoints/` instead if you prefer).
+2. **Train `EarlyExitGate` offline** (reconstruction-supervised):
 
    ```bash
    cd third_party/oat
@@ -162,11 +147,17 @@ policy.early_exit_threshold=0.9
 
 ## Tests
 
-Lightweight checks for `oat_ext` only (full OAT stack not required):
+Lightweight checks for `oat_ext` only. **Option A** — minimal venv (matches CI): `pytest` + `omegaconf` + `torch`. **Option B** — after `./scripts/install_oat.sh`, use the OAT `.venv`:
 
 ```bash
 pip install -r requirements.txt
+pip install "torch>=2.0.0"
 pytest
+```
+
+```bash
+# After ./scripts/install_oat.sh (torch already in third_party/oat/.venv)
+./third_party/oat/.venv/bin/python -m pytest
 ```
 
 ---
@@ -179,7 +170,7 @@ After syncing the repo on a rented GPU, run the bundled pipeline (writes `checkp
 ./scripts/vast_run_early_exit.sh --checkpoint /path/to/policy.ckpt
 ```
 
-Then add figures and benchmark tables to the README using [docs/results-and-visuals.md](docs/results-and-visuals.md) (CSV schema, plot script, suggested tables).
+Then add figures and benchmark tables using [docs/results-and-visuals.md](docs/results-and-visuals.md) (CSV schema, plot script, suggested tables).
 
 ---
 

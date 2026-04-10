@@ -40,10 +40,8 @@ class EarlyExitGate(nn.Module):
         Args:
             h: (B, T, n_emb) or (B, n_emb)
         Returns:
-            logits: (B, T, 1) or (B, 1), not sigmoid
+            logits: (B, T, 1) or (B, 1), raw (no sigmoid)
         """
-        if h.dim() == 2:
-            return self.net(h)
         return self.net(h)
 
 

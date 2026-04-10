@@ -10,7 +10,7 @@
 
 </div>
 
-> **TL;DR.** Stop generating OAT tokens when a learned gate or max-probability heuristic says the prefix is sufficient—trading a bounded quality risk for lower average decode cost.
+> **TL;DR.** Stop generating OAT tokens when a learned gate or max-probability heuristic says the prefix is sufficient -- trading a bounded quality risk for lower average decode cost.
 
 ---
 
@@ -24,8 +24,7 @@
 6. [Hydra](#hydra-overrides-example)
 7. [Inference](#inference)
 8. [Repro checklist](#repro-checklist-for-graders)
-9. [BLT / H-Net narrative](#relating-to-blt--h-net-report-wording)
-10. [Limitations](#limitations)
+9. [Limitations](#limitations)
 
 ---
 
@@ -58,15 +57,15 @@ flowchart LR
 | Stage | Tensor / object | Note |
 |-------|-----------------|------|
 | Condition | `F` | Encoded observation conditions the LM |
-| LM state | `H` @ step | Post-`ln_f`, pre-vocab head—gate input |
+| LM state | `H` @ step | Post-`ln_f`, pre-vocab head -- gate input |
 | Decision | scalar / rule | Sigmoid threshold or `max(softmax)` |
-| Output | token stream → `A` | Standard OAT detokenize |
+| Output | token stream -> `A` | Standard OAT detokenize |
 
 ---
 
 ## Hypothesis
 
-An **early-exit** mechanism during autoregressive OAT token prediction can **cut inference latency** on “easy” timesteps while preserving a fallback to the full token budget when the model is uncertain.
+An **early-exit** mechanism during autoregressive OAT token prediction can **cut inference latency** on "easy" timesteps while preserving a fallback to the full token budget when the model is uncertain.
 
 | Mechanism | Signal | Parameters |
 |-----------|--------|------------|
@@ -120,7 +119,7 @@ uv run python ../../scripts/sweep_early_exit.py \
 
 ## Offline gate training (reconstruction labels)
 
-Supervision tighter than “1 only on last step”: for prefix length \(k\), if \(\text{MSE}(\text{decode}(t_{1:k}), a_{\text{gt}}) < \tau\), set label **1** at timestep \(k-1\).
+Supervision tighter than "1 only on last step": for prefix length \(k\), if \(\text{MSE}(\text{decode}(t_{1:k}), a_{\text{gt}}) < \tau\), set label **1** at timestep \(k-1\).
 
 ```bash
 cd third_party/oat
@@ -138,10 +137,10 @@ The script prepends `src/` and `third_party/oat` to `sys.path`. Requires an **OA
 
 ## Hydra overrides (example)
 
-Run from `third_party/oat` with `PYTHONPATH` including this repo’s `src` (see `scripts/train_baseline.sh`).
+Run from `third_party/oat` with `PYTHONPATH` including this repo's `src` (see `scripts/train_baseline.sh`).
 
 ```bash
-export PYTHONPATH="/path/to/mipt-lab-project/src:${PYTHONPATH}"
+export PYTHONPATH="/path/to/oat-early-exit/src:${PYTHONPATH}"
 cd third_party/oat
 
 HYDRA_FULL_ERROR=1 uv run accelerate launch --num_processes 1 scripts/run_workspace.py \
@@ -186,15 +185,6 @@ Sweep **threshold** / **max_prob**; record mean wall-clock per rollout and task 
 1. Install OAT (`./scripts/install_oat.sh` from lab root).
 2. Train or obtain OAT tokenizer checkpoint; train policy with or without `early_exit_loss_weight`.
 3. Run LIBERO eval (upstream `scripts/eval_policy_sim.py`); patch runner to pass `use_early_exit=True` if required.
-
----
-
-## Relating to BLT / H-Net (report wording)
-
-| Idea | Mapping |
-|------|---------|
-| **BLT** | Dynamic compute: stop when LM / reconstruction says “enough.” |
-| **H-Net (narrative)** | Coarse vs fine—a short prefix may specify motion; full budget for detail. |
 
 ---
 
