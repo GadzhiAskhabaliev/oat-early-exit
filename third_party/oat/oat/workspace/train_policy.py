@@ -36,6 +36,12 @@ from oat.policy.base_policy import BasePolicy
 register_new_resolvers()
 
 
+def _oat_wandb_enabled() -> bool:
+    """Set OAT_DISABLE_WANDB=1 for headless / Vast runs (skip W&B + interactive prompts)."""
+    v = os.environ.get("OAT_DISABLE_WANDB", "").strip().lower()
+    return v not in ("1", "true", "yes")
+
+
 class TrainPolicyWorkspace(BaseWorkspace):
     include_keys = ['global_step', 'epoch']
 
@@ -68,8 +74,9 @@ class TrainPolicyWorkspace(BaseWorkspace):
         cfg = copy.deepcopy(self.cfg)
 
         # configure accelerator
+        use_wandb = _oat_wandb_enabled()
         accelerator = Accelerator(
-            log_with="wandb",
+            log_with="wandb" if use_wandb else None,
             kwargs_handlers=[
                 DistributedDataParallelKwargs(find_unused_parameters=False),
                 InitProcessGroupKwargs(timeout=timedelta(hours=2)), # sim eval can take long time
@@ -159,18 +166,19 @@ class TrainPolicyWorkspace(BaseWorkspace):
         )
 
         # configure logging
-        wandb_cfg = OmegaConf.to_container(cfg.logging, resolve=True)
-        wandb_cfg.pop("project")
-        wandb_cfg['dir'] = str(self.output_dir)
-        accelerator.init_trackers(
-            project_name=cfg.logging.project,
-            config=OmegaConf.to_container(cfg, resolve=True),
-            init_kwargs={"wandb": wandb_cfg}
-        )
-        if accelerator.is_main_process:
-            accelerator.get_tracker("wandb").run.config.update({
-                "output_dir": str(self.output_dir)
-            })
+        if use_wandb:
+            wandb_cfg = OmegaConf.to_container(cfg.logging, resolve=True)
+            wandb_cfg.pop("project")
+            wandb_cfg['dir'] = str(self.output_dir)
+            accelerator.init_trackers(
+                project_name=cfg.logging.project,
+                config=OmegaConf.to_container(cfg, resolve=True),
+                init_kwargs={"wandb": wandb_cfg}
+            )
+            if accelerator.is_main_process:
+                accelerator.get_tracker("wandb").run.config.update({
+                    "output_dir": str(self.output_dir)
+                })
 
         # training loop
         with JsonLogger(os.path.join(self.output_dir, 'logs.json')) as json_logger:
