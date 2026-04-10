@@ -1,6 +1,6 @@
-# Расширения лабораторной (тесты, merge конфигов)
+# Lab extensions (tests, config merge)
 omegaconf>=2.3.0
 pytest>=8.0.0
 torch>=2.0.0
 
-# OAT устанавливается из vendor (рекомендуется uv, см. scripts/install_oat.sh и third_party/oat/README.md).
+# OAT is installed from vendor (prefer uv; see scripts/install_oat.sh and third_party/oat/README.md).
