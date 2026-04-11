@@ -8,34 +8,33 @@ from oat.tokenizer.oat.model.transformer import Transformer
 from oat.tokenizer.oat.model.head import LinearHead
 
 
-@lru_cache(maxsize=32)
-def create_causal_last_mask(
-    action_len: int, 
-    register_len: int, 
-    device: str,
-) -> torch.Tensor:
+@lru_cache(maxsize=64)
+def _create_causal_last_mask_cpu(action_len: int, register_len: int) -> torch.Tensor:
     """
-    Create causal_last attention mask for the combined sequence [actions, registers]
-    
-    Attention pattern:
-    - Actions can attend to all actions (full attention) but not to registers
-    - Registers can attend to all actions + causally to previous registers
-    
-    Args:
-        action_len: Length of action sequence
-        register_len: Number of register tokens
-        device: Device for the mask tensor
-        
-    Returns:
-        Attention mask of shape (seq_len, seq_len) where True means attended to
+    CPU-only boolean mask pattern for [actions, registers] attention.
+    Cached tensors must not be tied to a specific CUDA context; `.to(device)` per forward.
     """
     total_len = action_len + register_len
-    mask = torch.zeros((total_len, total_len), dtype=torch.bool, device=device)
-    causal_reg_mask = torch.triu(torch.ones((register_len, register_len), 
-        dtype=torch.bool, device=device), diagonal=1)
+    mask = torch.zeros((total_len, total_len), dtype=torch.bool)
+    causal_reg_mask = torch.triu(
+        torch.ones((register_len, register_len), dtype=torch.bool), diagonal=1
+    )
     mask[action_len:, action_len:] = causal_reg_mask
     mask[:action_len, action_len:] = True
     return ~mask
+
+
+def create_causal_last_mask(
+    action_len: int,
+    register_len: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """
+    Attention pattern:
+    - Actions attend to all actions, not registers
+    - Registers attend to all actions + causal among registers
+    """
+    return _create_causal_last_mask_cpu(action_len, register_len).to(device=device)
 
 
 class RegisterEncoder(nn.Module):
@@ -83,7 +82,7 @@ class RegisterEncoder(nn.Module):
         ], dim=1)
         
         # transformer forward
-        causal_last_attn_mask = create_causal_last_mask(T, self.num_registers, str(sample.device))
+        causal_last_attn_mask = create_causal_last_mask(T, self.num_registers, sample.device)
         x = self.transformer(x, block_mask=causal_last_attn_mask)
         
         # extract register tokens and project to latent space

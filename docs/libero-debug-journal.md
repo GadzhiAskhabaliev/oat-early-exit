@@ -261,3 +261,12 @@ From repo root (after `git pull`):
 ./scripts/run_diag_libero_tokens.sh
 ./scripts/run_diag_libero_tokens.sh --reset-policy-weights
 ```
+
+### Fix: zero encoder latents + collapsed tokens after `from_checkpoint` (2026-04-11)
+
+- Symptom: `lat_mean_std=(0,0)`, `uniq=1`, constant token id (e.g. 500), while normalized actions still vary.
+- Cause class: `RegisterEncoder` uses `LinearHead` with default **zero** weight init; if the **policy checkpoint** carries a broken / never-updated copy of `action_tokenizer` weights, the head stays at zero and the encoder path collapses before FSQ.
+- Fix:
+  1. After `load_payload` in `BasePolicy.from_checkpoint`, **re-load `action_tokenizer` state** from `policy.action_tokenizer.checkpoint` on disk (same path Hydra used at build time), for both `workspace.model` and `workspace.ema_model` when present.
+  2. `RegisterEncoder` attention mask: cache only a **CPU** mask pattern and `.to(device)` per forward (avoid caching CUDA tensors via `lru_cache`).
+  3. `diag_libero_tokens.py`: build `ZarrDataset` with `n_obs_steps` / `n_action_steps` read from the **policy cfg** in the checkpoint (avoids silent horizon mismatch vs training).

@@ -23,6 +23,7 @@ import argparse
 import os
 
 import torch
+from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
 from oat.dataset.zarr_dataset import ZarrDataset
@@ -53,7 +54,11 @@ def main() -> None:
 
     torch.manual_seed(args.seed)
 
-    policy, _cfg = BasePolicy.from_checkpoint(args.ckpt, return_configuration=True)
+    policy, cfg = BasePolicy.from_checkpoint(args.ckpt, return_configuration=True)
+
+    n_obs = int(OmegaConf.select(cfg, "n_obs_steps") or OmegaConf.select(cfg, "policy.n_obs_steps") or 2)
+    n_act = int(OmegaConf.select(cfg, "n_action_steps") or OmegaConf.select(cfg, "policy.n_action_steps") or 32)
+    print(f"==> dataset horizons from ckpt cfg: n_obs_steps={n_obs} n_action_steps={n_act}")
 
     ds = ZarrDataset(
         zarr_path=args.zarr,
@@ -66,8 +71,8 @@ def main() -> None:
             "task_uid",
         ],
         action_key="action",
-        n_obs_steps=2,
-        n_action_steps=32,
+        n_obs_steps=n_obs,
+        n_action_steps=n_act,
         seed=42,
         val_ratio=0.1,
         max_train_episodes=None,

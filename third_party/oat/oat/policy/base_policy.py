@@ -1,10 +1,61 @@
+from pathlib import Path
 from typing import Dict, List, Union, Optional, Tuple
-import torch
+
 import dill
 import hydra
+import torch
 from omegaconf import OmegaConf
+
 from oat.model.common.module_attr_mixin import ModuleAttrMixin
 from oat.model.common.normalizer import LinearNormalizer
+
+
+def _resolve_tokenizer_ckpt_path(raw: str) -> Optional[Path]:
+    """Resolve tokenizer checkpoint path (Hydra often stores relative paths)."""
+    p = Path(raw).expanduser()
+    if p.is_file():
+        return p
+    for root in (Path.cwd(), Path(__file__).resolve().parents[2]):
+        cand = (root / raw).resolve()
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _reload_action_tokenizer_from_cfg(policy: torch.nn.Module, cfg: OmegaConf) -> None:
+    """
+    Policies are often built with `OATTok.from_checkpoint(tok_path)` and then trained; the
+    policy `.ckpt` still contains a full copy of `action_tokenizer` weights. If that copy ever
+    diverges (partial load, stale run, optimizer edge cases), the tokenizer head can stay at its
+    zero-init (`LinearHead` defaults) and collapse latents/tokens.
+
+    Re-loading from the original tokenizer checkpoint restores the intended frozen tokenizer.
+    """
+    tok_cfg = OmegaConf.select(cfg, "policy.action_tokenizer")
+    if tok_cfg is None:
+        return
+    ckpt = OmegaConf.select(tok_cfg, "checkpoint")
+    if ckpt is None:
+        return
+    ckpt_s = str(ckpt).strip()
+    if not ckpt_s or ckpt_s in ("???", "..."):
+        return
+    path = _resolve_tokenizer_ckpt_path(ckpt_s)
+    if path is None:
+        print(f"[warn] action_tokenizer.checkpoint not found on disk ({ckpt_s}); skip tokenizer refresh")
+        return
+    tok = getattr(policy, "action_tokenizer", None)
+    if tok is None or not hasattr(tok.__class__, "from_checkpoint"):
+        return
+    ref, _ = tok.__class__.from_checkpoint(str(path), return_configuration=True)
+    try:
+        tok.load_state_dict(ref.state_dict(), strict=True)
+    except Exception as exc:
+        incomp = tok.load_state_dict(ref.state_dict(), strict=False)
+        print(
+            f"[warn] strict tokenizer reload failed ({exc}); "
+            f"loaded non-strict. missing={incomp.missing_keys} unexpected={incomp.unexpected_keys}"
+        )
 
 class BasePolicy(ModuleAttrMixin):
     n_obs_steps: int
@@ -21,6 +72,14 @@ class BasePolicy(ModuleAttrMixin):
         cls = hydra.utils.get_class(cfg._target_)
         workspace = cls(cfg, output_dir=output_dir, lazy_instantiation=False)
         workspace.load_payload(payload, exclude_keys=None, include_keys=None)
+
+        # Restore frozen tokenizer from the canonical OATTok (etc.) checkpoint after policy weights
+        # are loaded — policy checkpoints can carry a broken copy while cfg still points at tok ckpt.
+        _reload_action_tokenizer_from_cfg(workspace.model, cfg)
+        em = getattr(workspace, "ema_model", None)
+        if em is not None:
+            _reload_action_tokenizer_from_cfg(em, cfg)
+
         policy = workspace.model
         if getattr(cfg.training, 'use_ema', False):
             policy = workspace.ema_model
