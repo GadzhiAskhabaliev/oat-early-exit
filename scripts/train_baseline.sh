@@ -4,6 +4,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OAT="${ROOT}/third_party/oat"
 export PATH="${HOME}/.local/bin:${PATH}"
 export PYTHONPATH="${ROOT}/src:${PYTHONPATH:-}"
+export OAT_DISABLE_WANDB="${OAT_DISABLE_WANDB:-1}"
 
 cd "${OAT}"
 # Нужен датасет libero10 zarr (third_party/oat/README.md).
