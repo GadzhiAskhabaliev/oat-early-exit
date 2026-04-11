@@ -2,6 +2,7 @@ from typing import Dict, List, Union, Optional, Tuple
 import torch
 import dill
 import hydra
+from omegaconf import OmegaConf
 from oat.model.common.module_attr_mixin import ModuleAttrMixin
 from oat.model.common.normalizer import LinearNormalizer
 
@@ -23,6 +24,24 @@ class BasePolicy(ModuleAttrMixin):
         policy = workspace.model
         if getattr(cfg.training, 'use_ema', False):
             policy = workspace.ema_model
+
+        # Match training-time behavior in `TrainPolicyWorkspace.run()`:
+        # fit normalizer from the task dataset and apply it to the policy.
+        #
+        # Without this, eval / ad-hoc diagnostics can silently use mismatched
+        # normalization for observations/actions vs the zarr training distribution.
+        dataset_cfg = OmegaConf.select(cfg, "task.policy.dataset")
+        if dataset_cfg is not None:
+            try:
+                dataset = hydra.utils.instantiate(dataset_cfg)
+                normalizer = dataset.get_normalizer()
+                workspace.model.set_normalizer(normalizer)
+                if getattr(cfg.training, "use_ema", False) and getattr(workspace, "ema_model", None) is not None:
+                    workspace.ema_model.set_normalizer(normalizer)
+            except Exception as exc:
+                # Don't hard-fail checkpoint loading for non-standard checkpoints;
+                # training entrypoints still set normalizers explicitly.
+                print(f"[warn] Failed to apply dataset normalizer from cfg: {exc}")
         
         if return_configuration:
             return policy, cfg
