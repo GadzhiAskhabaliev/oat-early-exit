@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, List, Union, Optional, Tuple
 
@@ -56,9 +57,10 @@ def _reload_action_tokenizer_from_cfg(policy: torch.nn.Module, cfg: OmegaConf) -
             f"[warn] strict tokenizer reload failed ({exc}); "
             f"loaded non-strict. missing={incomp.missing_keys} unexpected={incomp.unexpected_keys}"
         )
+    wsum: Optional[float] = None
+    head = getattr(getattr(tok, "encoder", None), "head", None)
+    proj = getattr(head, "proj", None)
     try:
-        head = getattr(getattr(tok, "encoder", None), "head", None)
-        proj = getattr(head, "proj", None)
         if proj is not None:
             wsum = float(proj.weight.detach().float().abs().sum())
             print(f"[oat] action_tokenizer refreshed from {path} (|encoder.head.proj|_1={wsum:.4f})")
@@ -66,6 +68,15 @@ def _reload_action_tokenizer_from_cfg(policy: torch.nn.Module, cfg: OmegaConf) -
             print(f"[oat] action_tokenizer refreshed from {path}")
     except Exception as exc:
         print(f"[oat] action_tokenizer refreshed from {path} (head stats skipped: {exc})")
+
+    skip = os.environ.get("OAT_SKIP_TOK_HEAD_SANITY", "").strip().lower() in ("1", "true", "yes")
+    if not skip and proj is not None and wsum is not None and wsum < 1e-5:
+        raise RuntimeError(
+            f"Tokenizer checkpoint is unusable (encoder.head.proj is still all-zero, |W|_1={wsum}). "
+            f"File: {path}. Retrain OATTok (train_oattok) and point policy.action_tokenizer.checkpoint "
+            f"to the new latest.ckpt. Inspect first: python ../../scripts/inspect_oattok_ckpt.py {path} "
+            f"(from third_party/oat). Debug-only bypass: OAT_SKIP_TOK_HEAD_SANITY=1."
+        )
 
 class BasePolicy(ModuleAttrMixin):
     n_obs_steps: int

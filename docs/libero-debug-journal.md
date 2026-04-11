@@ -271,3 +271,5 @@ From repo root (after `git pull`):
   2. `RegisterEncoder` attention mask: cache only a **CPU** mask pattern and `.to(device)` per forward (avoid caching CUDA tensors via `lru_cache`).
   3. `diag_libero_tokens.py`: build `ZarrDataset` with `n_obs_steps` / `n_action_steps` read from the **policy cfg** in the checkpoint (avoids silent horizon mismatch vs training).
   4. `diag_libero_tokens.py`: run **`policy.eval()`** and keep **`action_tokenizer.eval()`** — a whole-policy `.train()` enables dropout inside the frozen tokenizer transformer and can distort encoder probes; encoder probe runs under **autocast disabled** for stable floats.
+
+- **Corrupt OATTok on disk:** if `/root/oattok_libero10.ckpt` (or any ref) still has `|encoder.head.proj|_1≈0` after reload, no policy-side fix can recover it — retrain `train_oattok`. `scripts/inspect_oattok_ckpt.py` checks this in one command; `BasePolicy.from_checkpoint` now **raises** unless `OAT_SKIP_TOK_HEAD_SANITY=1`.
