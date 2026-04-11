@@ -153,9 +153,12 @@ class OATPolicy(BasePolicy):
 
     def set_normalizer(self, normalizer):
         # Dataset normalizer is fit on {'action': ..., **obs_keys...}.
-        # Observation encoders should only see observation keys, while OATTok must keep the
-        # action normalization that matches its own checkpoint (do NOT blindly overwrite it with
-        # the full dataset normalizer dict).
+        # Observation encoders should only see observation keys.
+        #
+        # Important: OATTok ships with its own `normalizer` loaded from the tokenizer checkpoint.
+        # Overwriting it with dataset-fitted action stats is only valid if those stats exactly match
+        # tokenizer training; in practice it's safer to keep tokenizer normalization frozen and only
+        # wire observation normalization here.
         obs_keys = [k for k in getattr(normalizer, "params_dict", {}).keys() if k != "action"]
         if len(obs_keys) > 0:
             obs_norm = LinearNormalizer()
@@ -163,13 +166,6 @@ class OATPolicy(BasePolicy):
                 {k: copy.deepcopy(v) for k, v in normalizer.params_dict.items() if k != "action"}
             )
             self.obs_encoder.set_normalizer(obs_norm)
-
-        if "action" in getattr(normalizer, "params_dict", {}):
-            tok_norm = LinearNormalizer()
-            tok_norm.params_dict = nn.ParameterDict(
-                {"action": copy.deepcopy(normalizer.params_dict["action"])}
-            )
-            self.action_tokenizer.set_normalizer(tok_norm)
 
     def get_optimizer(
         self, 
