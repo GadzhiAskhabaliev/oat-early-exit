@@ -37,6 +37,12 @@ def main() -> None:
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--batches", type=int, default=3, help="How many random batches to probe")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--reset-policy-weights",
+        action="store_true",
+        help="If set, re-initialize the AR policy weights after loading checkpoint "
+        "(useful to separate 'broken tokenizer' vs 'collapsed trained policy').",
+    )
     args = p.parse_args()
 
     if not args.ckpt:
@@ -75,6 +81,8 @@ def main() -> None:
 
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     policy = policy.to(dev).train()
+    if args.reset_policy_weights:
+        policy.model.apply(lambda m: m.reset_parameters() if hasattr(m, "reset_parameters") else None)
 
     it = iter(dl)
     for i in range(args.batches):
@@ -84,8 +92,13 @@ def main() -> None:
         batch["action"] = batch["action"].to(dev)
 
         act = batch["action"]
-        tok = policy.action_tokenizer.tokenize(act)
-        t = tok.detach().long()
+
+        tokn = policy.action_tokenizer
+        with torch.no_grad():
+            nsamples = tokn.normalizer["action"].normalize(act)
+            latents = tokn.encoder(nsamples)
+            latents_q, tok_pre = tokn.quantizer(latents)
+            t = tok_pre.detach().long()
 
         u = int(torch.unique(t).numel())
         z = float((t == 0).float().mean().item())
@@ -98,6 +111,9 @@ def main() -> None:
 
         print(
             f"[batch {i}] action_mean_std=({float(act.mean()):.6f},{float(act.std()):.6f}) "
+            f"nsamp_mean_std=({float(nsamples.mean()):.6f},{float(nsamples.std()):.6f}) "
+            f"lat_mean_std=({float(latents.mean()):.6f},{float(latents.std()):.6f}) "
+            f"latq_mean_std=({float(latents_q.mean()):.6f},{float(latents_q.std()):.6f}) "
             f"tokens_shape={tuple(t.shape)} zero_frac={z:.4f} uniq={u} minmax=({mn},{mx}) "
             f"loss_f64={lf64} finite={finite}"
         )
