@@ -22,6 +22,13 @@ if [[ -z "${OAT_TOK_CKPT:-}" ]]; then
   exit 1
 fi
 
+# Refuse to launch multi-hour policy training on a broken tokenizer (zero LinearHead).
+# Bypass: OAT_SKIP_OATTOK_INSPECT=1
+if [[ "${OAT_SKIP_OATTOK_INSPECT:-0}" != "1" ]]; then
+  echo "==> OATTok sanity (inspect_oattok_ckpt.py) on ${OAT_TOK_CKPT}"
+  ( cd "${OAT}" && uv run python "${ROOT}/scripts/inspect_oattok_ckpt.py" "${OAT_TOK_CKPT}" )
+fi
+
 export OAT_DISABLE_WANDB="${OAT_DISABLE_WANDB:-1}"
 # Fail fast on silent zero-loss collapse (set 0 to disable).
 export OAT_ZERO_LOSS_PATIENCE="${OAT_ZERO_LOSS_PATIENCE:-200}"
