@@ -218,3 +218,46 @@ Rationale:
 - `BasePolicy.from_checkpoint` historically returned a policy **without** re-fitting/applying the dataset normalizer.
 - That made ad-hoc diagnostics (and any code path relying on `from_checkpoint`) disagree with `TrainPolicyWorkspace.run()`.
 - Fix: `from_checkpoint` now instantiates `cfg.task.policy.dataset`, computes `get_normalizer()`, and applies it to `workspace.model` (and EMA model if enabled).
+
+## Token batch diagnostics (`scripts/diag_libero_tokens.py`)
+
+This script answers: **on real zarr minibatches, is the path *data → tokenizer normalizer → encoder/FSQ → discrete tokens → policy loss* sane?** It is **not** training and **not** LIBERO sim evaluation; it is a cheap offline probe to avoid guessing from tqdm `train_loss` alone.
+
+### What it does
+
+1. Loads a **policy checkpoint** via `BasePolicy.from_checkpoint` (same path as training/eval checkpoints).
+2. Builds `ZarrDataset` against the given `--zarr` (default `data/libero/libero10_N500.zarr` when run from `third_party/oat`).
+3. Draws `--batches` random training minibatches.
+4. For each batch, under `torch.no_grad()` for the probe branch:
+   - logs raw `action` mean/std;
+   - runs **tokenizer** `normalizer["action"].normalize`, encoder, quantizer, and prints **token** stats: shape, `zero_frac`, **`uniq`** (count of distinct ids in that batch), `minmax`;
+   - also latent / quantized latent mean/std for saturation checks.
+5. Calls `policy(batch)` once per batch and prints **`loss_f64`** and whether the loss is finite.
+
+### How to read the printed line
+
+- **`uniq` small (e.g. 1) with wide raw actions** → token collapse or severe saturation in the tokenizer path; investigate tokenizer checkpoint vs zarr, FSQ, or normalizer mismatch (see root-cause section above).
+- **`uniq` healthy** but loss looks wrong only **without** `--reset-policy-weights` → likely **collapsed or overfit AR policy head** on that checkpoint; retrain or compare to a fresh init.
+- Run **twice**: default, then with **`--reset-policy-weights`** (re-inits policy modules that expose `reset_parameters`). If collapse disappears only after reset, the tokenizer/data path is probably fine and the saved policy weights are the problem.
+
+### Remote / SSH ergonomics
+
+- On Vast, **`uv` is often missing from PATH** in a fresh tmux shell. Either prepend `export PATH="${HOME}/.local/bin:${PATH}"` or use the repo wrapper **`./scripts/run_diag_libero_tokens.sh`** from the repo root (it sets `PATH`, `PYTHONPATH`, picks `uv run` or `third_party/oat/.venv/bin/python`, and can auto-pick the latest `output/manual/**/*.ckpt` when `CKPT` is unset).
+- Optional persistence: add the same `PATH` line to `~/.bashrc` on the instance so every login sees `uv`.
+
+### Example commands (from `third_party/oat`)
+
+```bash
+export PATH="${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="${HOME}/oat-early-exit/src:${PYTHONPATH:-}"
+export CKPT=output/manual/<run_tag>/checkpoints/latest.ckpt
+uv run python ../../scripts/diag_libero_tokens.py --ckpt "$CKPT" --zarr data/libero/libero10_N500.zarr --batches 5
+uv run python ../../scripts/diag_libero_tokens.py --ckpt "$CKPT" --zarr data/libero/libero10_N500.zarr --batches 5 --reset-policy-weights
+```
+
+From repo root (after `git pull`):
+
+```bash
+./scripts/run_diag_libero_tokens.sh
+./scripts/run_diag_libero_tokens.sh --reset-policy-weights
+```
