@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import copy
 from contextlib import nullcontext
 from typing import Dict, Optional, Tuple
 
 from oat.policy.base_policy import BasePolicy
 from oat.tokenizer.oat.tokenizer import OATTok
 from oat.perception.base_obs_encoder import BaseObservationEncoder
+from oat.model.common.normalizer import LinearNormalizer
 # from oat.model.autoregressive.transformer import AutoregressiveModel
 from oat.model.autoregressive.transformer_cache import AutoregressiveModel
 
@@ -150,11 +152,24 @@ class OATPolicy(BasePolicy):
         )
 
     def set_normalizer(self, normalizer):
-        self.obs_encoder.set_normalizer(normalizer)
-        # Critical: align OATTok normalization with the dataset normalizer used during training.
-        # If this is skipped, tokenization can collapse to near-constant indices even when raw
-        # actions vary, which makes CE loss misleadingly easy / degenerate.
-        self.action_tokenizer.set_normalizer(normalizer)
+        # Dataset normalizer is fit on {'action': ..., **obs_keys...}.
+        # Observation encoders should only see observation keys, while OATTok must keep the
+        # action normalization that matches its own checkpoint (do NOT blindly overwrite it with
+        # the full dataset normalizer dict).
+        obs_keys = [k for k in getattr(normalizer, "params_dict", {}).keys() if k != "action"]
+        if len(obs_keys) > 0:
+            obs_norm = LinearNormalizer()
+            obs_norm.params_dict = nn.ParameterDict(
+                {k: copy.deepcopy(v) for k, v in normalizer.params_dict.items() if k != "action"}
+            )
+            self.obs_encoder.set_normalizer(obs_norm)
+
+        if "action" in getattr(normalizer, "params_dict", {}):
+            tok_norm = LinearNormalizer()
+            tok_norm.params_dict = nn.ParameterDict(
+                {"action": copy.deepcopy(normalizer.params_dict["action"])}
+            )
+            self.action_tokenizer.set_normalizer(tok_norm)
 
     def get_optimizer(
         self, 

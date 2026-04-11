@@ -209,8 +209,9 @@ Rationale:
 ### Root-cause fix (confirmed by diagnostics)
 
 - Symptom observed on a real batch: tokenized actions had `uniq=1` with all token ids equal to `500`, while raw actions had non-trivial variance.
-- Root cause: `OATPolicy.set_normalizer` did **not** apply the dataset `LinearNormalizer` to `OATTok`, so tokenization could collapse relative to the training data distribution.
-- Fix: call `self.action_tokenizer.set_normalizer(normalizer)` inside `OATPolicy.set_normalizer`.
+- Initial hypothesis: missing `action_tokenizer.set_normalizer(...)`.
+- Correction: passing the **entire** dataset `LinearNormalizer` into `OATTok` is unsafe because it contains both obs + `action` keys; the tokenizer path should receive **only** the `action` field params, while obs encoders should receive **only** obs fields.
+- Fix: split the dataset normalizer in `OATPolicy.set_normalizer` and apply the appropriate subset to `obs_encoder` vs `action_tokenizer`.
 
 ### Follow-up fix (checkpoint load / eval parity)
 
