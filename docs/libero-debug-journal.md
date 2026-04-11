@@ -270,3 +270,4 @@ From repo root (after `git pull`):
   1. After `load_payload` in `BasePolicy.from_checkpoint`, **re-load `action_tokenizer` state** from `policy.action_tokenizer.checkpoint` on disk (same path Hydra used at build time), for both `workspace.model` and `workspace.ema_model` when present.
   2. `RegisterEncoder` attention mask: cache only a **CPU** mask pattern and `.to(device)` per forward (avoid caching CUDA tensors via `lru_cache`).
   3. `diag_libero_tokens.py`: build `ZarrDataset` with `n_obs_steps` / `n_action_steps` read from the **policy cfg** in the checkpoint (avoids silent horizon mismatch vs training).
+  4. `diag_libero_tokens.py`: run **`policy.eval()`** and keep **`action_tokenizer.eval()`** — a whole-policy `.train()` enables dropout inside the frozen tokenizer transformer and can distort encoder probes; encoder probe runs under **autocast disabled** for stable floats.
