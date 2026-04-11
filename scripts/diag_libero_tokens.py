@@ -59,6 +59,8 @@ def main() -> None:
     n_obs = int(OmegaConf.select(cfg, "n_obs_steps") or OmegaConf.select(cfg, "policy.n_obs_steps") or 2)
     n_act = int(OmegaConf.select(cfg, "n_action_steps") or OmegaConf.select(cfg, "policy.n_action_steps") or 32)
     print(f"==> dataset horizons from ckpt cfg: n_obs_steps={n_obs} n_action_steps={n_act}")
+    tok_ck = OmegaConf.select(cfg, "policy.action_tokenizer.checkpoint")
+    print(f"==> cfg policy.action_tokenizer.checkpoint = {tok_ck!r}")
 
     ds = ZarrDataset(
         zarr_path=args.zarr,
@@ -88,9 +90,18 @@ def main() -> None:
     )
 
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    policy = policy.to(dev).train()
+    policy = policy.to(dev)
+    # Whole-policy .train() would put the frozen tokenizer back into train mode (dropout on),
+    # which can distort encoder latents in diagnostics.
+    policy.eval()
+    if getattr(policy, "action_tokenizer", None) is not None:
+        policy.action_tokenizer.eval()
     if args.reset_policy_weights:
+        policy.train()
         policy.model.apply(lambda m: m.reset_parameters() if hasattr(m, "reset_parameters") else None)
+        policy.eval()
+        if getattr(policy, "action_tokenizer", None) is not None:
+            policy.action_tokenizer.eval()
 
     it = iter(dl)
     for i in range(args.batches):
@@ -104,7 +115,8 @@ def main() -> None:
         tokn = policy.action_tokenizer
         with torch.no_grad():
             nsamples = tokn.normalizer["action"].normalize(act)
-            latents = tokn.encoder(nsamples)
+            with torch.autocast(device_type=dev.type, enabled=False):
+                latents = tokn.encoder(nsamples.float())
             latents_q, tok_pre = tokn.quantizer(latents)
             t = tok_pre.detach().long()
 

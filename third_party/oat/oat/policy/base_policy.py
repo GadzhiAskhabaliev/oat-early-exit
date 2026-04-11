@@ -56,6 +56,16 @@ def _reload_action_tokenizer_from_cfg(policy: torch.nn.Module, cfg: OmegaConf) -
             f"[warn] strict tokenizer reload failed ({exc}); "
             f"loaded non-strict. missing={incomp.missing_keys} unexpected={incomp.unexpected_keys}"
         )
+    try:
+        head = getattr(getattr(tok, "encoder", None), "head", None)
+        proj = getattr(head, "proj", None)
+        if proj is not None:
+            wsum = float(proj.weight.detach().float().abs().sum())
+            print(f"[oat] action_tokenizer refreshed from {path} (|encoder.head.proj|_1={wsum:.4f})")
+        else:
+            print(f"[oat] action_tokenizer refreshed from {path}")
+    except Exception as exc:
+        print(f"[oat] action_tokenizer refreshed from {path} (head stats skipped: {exc})")
 
 class BasePolicy(ModuleAttrMixin):
     n_obs_steps: int
