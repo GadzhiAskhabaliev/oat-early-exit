@@ -181,6 +181,9 @@ class TrainPolicyWorkspace(BaseWorkspace):
                 })
 
         # training loop
+        zero_loss_patience = int(os.environ.get("OAT_ZERO_LOSS_PATIENCE", "200"))
+        zero_loss_eps = float(os.environ.get("OAT_ZERO_LOSS_EPS", "0.0"))
+        zero_loss_streak = 0
         with JsonLogger(os.path.join(self.output_dir, 'logs.json')) as json_logger:
             while self.epoch < cfg.training.num_epochs:
 
@@ -209,6 +212,27 @@ class TrainPolicyWorkspace(BaseWorkspace):
                             # forward pass
                             with accelerator.autocast():
                                 loss = self.model(batch)
+                            loss_value = loss.detach().item()
+                            if not torch.isfinite(loss.detach()):
+                                raise RuntimeError(
+                                    f"Non-finite train loss detected at epoch={self.epoch}, "
+                                    f"global_step={self.global_step}: loss={loss_value}"
+                                )
+                            if zero_loss_patience > 0:
+                                if loss_value <= zero_loss_eps:
+                                    zero_loss_streak += 1
+                                else:
+                                    zero_loss_streak = 0
+                                if zero_loss_streak >= zero_loss_patience:
+                                    raise RuntimeError(
+                                        "Zero-loss collapse detected: "
+                                        f"{zero_loss_streak} consecutive steps with "
+                                        f"train_loss <= {zero_loss_eps} at epoch={self.epoch}, "
+                                        f"global_step={self.global_step}. "
+                                        "Stopping to prevent wasted GPU time. "
+                                        "Tune/disable via OAT_ZERO_LOSS_PATIENCE and "
+                                        "OAT_ZERO_LOSS_EPS."
+                                    )
 
                             # backward pass
                             accelerator.backward(loss)

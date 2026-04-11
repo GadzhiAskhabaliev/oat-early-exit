@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from contextlib import nullcontext
 from typing import Dict, Optional, Tuple
 
 from oat.policy.base_policy import BasePolicy
@@ -150,7 +151,10 @@ class OATPolicy(BasePolicy):
 
     def set_normalizer(self, normalizer):
         self.obs_encoder.set_normalizer(normalizer)
-        # self.action_tokenizer.set_normalizer(normalizer)
+        # Critical: align OATTok normalization with the dataset normalizer used during training.
+        # If this is skipped, tokenization can collapse to near-constant indices even when raw
+        # actions vary, which makes CE loss misleadingly easy / degenerate.
+        self.action_tokenizer.set_normalizer(normalizer)
 
     def get_optimizer(
         self, 
@@ -270,7 +274,11 @@ class OATPolicy(BasePolicy):
 
     def forward(self, batch) -> torch.Tensor:
         # tokenize trajectory
-        with torch.inference_mode():
+        # IMPORTANT: do not use inference_mode during training forward.
+        # Tokenization runs FSQ quantization with straight-through estimators; wrapping it in
+        # inference_mode can detach the graph in ways that make optimization unstable.
+        tok_ctx = nullcontext() if torch.is_grad_enabled() else torch.inference_mode()
+        with tok_ctx:
             action_tokens = self.action_tokenizer.tokenize(batch['action'])
 
         B = batch['action'].shape[0]
