@@ -179,5 +179,6 @@ Then add figures and benchmark tables using [docs/results-and-visuals.md](docs/r
 | Doc | Purpose |
 |-----|---------|
 | [docs/early-exit.md](docs/early-exit.md) | Pipeline, hypothesis, APIs, Hydra, limitations |
+| [docs/TEST_ASSIGNMENT_SUBMISSION.md](docs/TEST_ASSIGNMENT_SUBMISSION.md) | Сдача тестового задания: инструменты, гипотеза BLT/H-Net/OAT, логи, repro, черновик отчёта |
 | [docs/experiments-section-template.md](docs/experiments-section-template.md) | Report-ready experiment skeleton |
 | [docs/results-and-visuals.md](docs/results-and-visuals.md) | Post-run artifacts, plots, README benchmark strip |
