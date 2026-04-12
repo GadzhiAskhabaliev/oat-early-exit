@@ -27,6 +27,12 @@
 
 ---
 
+## Research framing (BLT · H-Net · OAT)
+
+This fork sits at the **intersection of ideas** from recent work on **adaptive / structured token streams** and **VLA-style action tokenization**: [BLT](https://arxiv.org/abs/2412.09871v1) motivates *not spending full compute everywhere*; [H-Net](https://arxiv.org/abs/2507.07955) suggests *hierarchical structure* in long-horizon behaviour; [OAT](https://github.com/Chaoqi-LIU/oat) provides the **ordered autoregressive action-token policy** we actually run in LIBERO. We do **not** ship a literal merged BLT+OAT architecture; we implement a **pragmatic hypothesis**—**adaptive early exit during AR decode**—as the engineering “wedge” (see [`docs/early-exit.md`](docs/early-exit.md)). Course-style submission notes in Russian: [`docs/TEST_ASSIGNMENT_SUBMISSION.md`](docs/TEST_ASSIGNMENT_SUBMISSION.md).
+
+---
+
 ## Repository map
 
 | Path | Contents |
@@ -171,6 +177,45 @@ After syncing the repo on a rented GPU, run the bundled pipeline (writes `checkp
 ```
 
 Then add figures and benchmark tables using [docs/results-and-visuals.md](docs/results-and-visuals.md) (CSV schema, plot script, suggested tables).
+
+### Before you delete the instance (backup checklist)
+
+Weights and eval dirs are **`.gitignore`d**—GitHub only holds code and docs. **Pull everything you care about off the machine before teardown.**
+
+**1. On the server** (adjust paths to your run; example layout from a typical train + eval):
+
+```bash
+cd /path/to/oat-early-exit   # repo root on the instance
+RUN_DIR=third_party/oat/output/manual/train30_20260411_134306
+EVAL_DIR=experiments/runs/eval_libero_7to8h_20260412_112444
+shopt -s nullglob   # omit empty globs
+RUN_CSVS=(experiments/runs/*.csv)
+
+tar -czvf ~/oat_lab_backup.tgz \
+  "$RUN_DIR/checkpoints/latest.ckpt" \
+  "$RUN_DIR/logs.json" \
+  "$EVAL_DIR/eval_log.json" \
+  "${RUN_CSVS[@]}"
+```
+
+Add Hydra overrides, `tmux` logs, or extra paths by appending more arguments before `"${RUN_CSVS[@]}"`.
+
+**2. Copy to your laptop** (from your machine, not from inside SSH):
+
+```bash
+scp -P <PORT> -i ~/.ssh/<key> root@<HOST>:~/oat_lab_backup.tgz .
+mkdir -p artifacts && tar -xzvf oat_lab_backup.tgz -C artifacts
+```
+
+Keep `artifacts/` **local** (it is gitignored). For examiners, attach **`oat_lab_backup.tgz`** or a subset (ckpt + `eval_log.json` + `logs.json`) to email / cloud / Zenodo.
+
+**3. Hugging Face Hub (optional)** — good for sharing a **policy** checkpoint with a short Model Card (what data, `n_test`, commit hash). Use **Git LFS** for `*.ckpt` or `huggingface_hub` `upload_file`; check your **storage quota** (large files can exceed free tiers). This repo does not automate uploads.
+
+**4. Long-term archive** — if HF is awkward, **[Zenodo](https://zenodo.org/)** (or institutional storage) for a single `.tgz` is often simpler for coursework.
+
+### English figures for reports / slides
+
+Use [docs/results-and-visuals.md](docs/results-and-visuals.md): Pareto-style plots (threshold vs early-exit rate vs proxy MSE), training curves, optional LIBERO success bars. **Set axis titles and legends in English** in `scripts/plot_sweep_csv.py` (or post-process labels) and save under `docs/assets/` (create the folder if missing), then embed in README or the PDF report.
 
 ---
 

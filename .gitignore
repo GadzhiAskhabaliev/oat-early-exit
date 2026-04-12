@@ -10,6 +10,9 @@ build/
 venv/
 .env
 
+# Local mirror of GPU artifacts (never commit weights)
+artifacts/
+
 # Experiments & checkpoints (large)
 experiments/checkpoints/
 experiments/runs/

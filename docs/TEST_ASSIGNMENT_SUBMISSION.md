@@ -166,4 +166,4 @@ uv run scripts/eval_policy_sim.py -c "$CKPT" -o "$OUT" -n 1 \
 - [ ] **Логи ассистентов** (экспорт Cursor + `libero-debug-journal.md`).
 - [ ] **Репозиторий** (ссылка на GitHub) + этот файл в `docs/`.
 - [ ] **Отчёт**: этот раздел 5 + **1 абзац** личных выводов в конце отчёта отдельным блоком.
-- [ ] **Бэкап артефактов** (`latest.ckpt`, `eval_log.json`, `logs.json`) — вне инстанса Vast.
+- [ ] **Бэкап артефактов** (`latest.ckpt`, `eval_log.json`, `logs.json`) — вне инстанса Vast. Пошагово: раздел **«Before you delete the instance»** в корневом [`README.md`](../README.md) (`tar` → `scp` → папка `artifacts/` на ноутбуке; опционально HF Hub или Zenodo).
