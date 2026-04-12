@@ -50,11 +50,11 @@ The assignment suggested **bridging** lines of work on VLA tokenization. Here, *
 | **[OAT](https://github.com/Chaoqi-LIU/oat)** | Ordered discrete **action tokens** + AR policy | The **implementation substrate** (LIBERO policy, KV cache, `generate()`) |
 
 We **do not** ship a literal fused BLT+OAT backbone. We ship a **research-grade engineering wedge**: **adaptive early exit inside OAT’s autoregressive decode** (`EarlyExitGate` or `max_prob`, Hydra toggles) — see [`docs/early-exit.md`](docs/early-exit.md).  
-Course submission packet (RU): [`docs/TEST_ASSIGNMENT_SUBMISSION.md`](docs/TEST_ASSIGNMENT_SUBMISSION.md).
+Course submission packet (RU): [`docs/test_assignment_submission.md`](docs/test_assignment_submission.md).
 
 ### Visual results (report kit)
 
-Illustrative PNGs (dark theme, English labels). **Synthetic demo fixtures** ship in-repo so GitHub always renders something meaningful; replace with your artifacts and rerun `python scripts/generate_report_assets.py` or the individual `scripts/plot_*.py` tools.
+Illustrative PNGs (dark theme, English labels). The **sweep** panel uses a small **synthetic** CSV in `docs/assets/fixtures/` (regen: `python scripts/generate_report_assets.py`). **Train / eval** figures should come from your real `logs.json` and `eval_log.json` (`plot_real_bundle.sh` or `plot_*.py`).
 
 | Early-exit sweep (proxy) | Training curves | LIBERO eval snapshot |
 |--------------------------|-----------------|----------------------|
@@ -266,7 +266,7 @@ Omit `--create-repo` if the model repo already exists on Hugging Face. Add `--pr
 
 ### English figures for reports / slides
 
-Regenerate everything from bundled **demo** CSV / logs / eval JSON:
+Regenerate **only** the synthetic **sweep** figure (does not overwrite train/eval PNGs):
 
 ```bash
 pip install matplotlib
@@ -298,6 +298,6 @@ Schema and tables: [docs/results-and-visuals.md](docs/results-and-visuals.md).
 | Doc | Purpose |
 |-----|---------|
 | [docs/early-exit.md](docs/early-exit.md) | Pipeline, hypothesis, APIs, Hydra, limitations |
-| [docs/TEST_ASSIGNMENT_SUBMISSION.md](docs/TEST_ASSIGNMENT_SUBMISSION.md) | Course submission pack (RU): tools, BLT/H-Net/OAT hypothesis, logs, repro, draft report |
+| [docs/test_assignment_submission.md](docs/test_assignment_submission.md) | Course submission pack (RU): tools, BLT/H-Net/OAT hypothesis, logs, repro, draft report |
 | [docs/experiments-section-template.md](docs/experiments-section-template.md) | Report-ready experiment skeleton |
 | [docs/results-and-visuals.md](docs/results-and-visuals.md) | Post-run artifacts, plots, README benchmark strip |
