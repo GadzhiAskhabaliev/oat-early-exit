@@ -81,3 +81,59 @@ Inexpensive signals when rollouts are too costly:
 - Short training / few epochs / demo subset
 - Reconstruction labels proxy task success, not guaranteed equivalence
 - Possible off-by-one between gate timestep and "semantic" prefix -- document if observed
+
+---
+
+## Filled snapshot (this project, April 2026)
+
+Copy or merge this block into the PDF report if you want the template **already populated** with the final LIBERO cycle. Numbers come from `logs.json` / `eval_log.json` and the debug journal; adjust if you re-run eval.
+
+### Environment specification (filled)
+
+| Field | Value |
+|-------|--------|
+| **Hardware** | Vast.ai rented Linux GPU box (SSH + tmux); exact SKU: run `nvidia-smi` on a fresh instance — varies by listing. |
+| **Software** | Fork [`oat-early-exit`](https://github.com/GadzhiAskhabaliev/oat-early-exit) (`main` at submission time); `./scripts/install_oat.sh` → `third_party/oat/.venv`; `PYTHONPATH` includes `src` for `oat_ext`. |
+| **Checkpoints** | **OATTok:** path from `OAT_TOK_CKPT` (not in git). **Policy:** `third_party/oat/output/manual/train30_20260411_134306/checkpoints/latest.ckpt` — mirror on [Hugging Face `hackhackhack66666/oat-libero-policy-early-exit`](https://huggingface.co/hackhackhack66666/oat-libero-policy-early-exit). |
+| **Data** | LIBERO-10 multitask zarr `libero10_N500` (`copy_to_memory=false`); policy train with `lazy_eval=true`. |
+
+### Protocol A (proxy / early-exit sweep)
+
+| # | Status | Notes |
+|---|--------|------|
+| 1–3 | **Partial** | Offline gate + `sweep_early_exit.py` are supported in repo; a **real sweep CSV** was not committed to git. README sweep figure may still use the **synthetic** fixture until you export CSV from a GPU run and regenerate `docs/assets/figure_early_exit_sweep.png`. |
+
+### Protocol B (LIBERO sim) — filled
+
+| Arm | What we ran |
+|-----|-------------|
+| **Baseline policy eval** | `eval_policy_sim.py` on `latest.ckpt`; `mean_success_rate_mean` **≈ 0.223** (`eval_log.json`). |
+| **Settings** | `n_test=350`, `n_parallel_envs=12`, `n_test_vis=0` — shorter than default 500 for wall-clock; document when comparing to papers. |
+| **Artifact path** | `experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json` (on server; same metrics also uploaded to HF with logs). |
+
+### Training signal (from epoch-end logs)
+
+| Metric | Approx. |
+|--------|---------|
+| **`val_loss` (final epochs)** | ~**2.22** on last epoch of `train30_20260411_134306` (see training curve PNG in repo). |
+| **`train_loss`** | Decreasing over 30 epochs; read `logs.json` for exact series — do not infer health from tqdm alone. |
+
+### Results matrix (minimal — what we actually tabulated)
+
+| Method | Threshold | Success (LIBERO sim) | Notes |
+|--------|-----------|------------------------|------|
+| OAT policy (no early-exit ablation in this eval row) | — | **≈ 22.3%** mean success (`n_test=350`) | Full early-exit threshold grid **not** re-run for this submission row. |
+
+### Figures (committed)
+
+| Figure | Path |
+|--------|------|
+| Training / validation loss | `docs/assets/figure_training_curves.png` |
+| Eval summary bar | `docs/assets/figure_eval_summary.png` |
+| Early-exit sweep (demo until real CSV) | `docs/assets/figure_early_exit_sweep.png` |
+
+### Limitations (this run)
+
+- No `n_test=500` table row in-repo unless you run a second eval.
+- `lazy_eval=true`: no rollout metrics during training.
+- HF + local `.tgz` backup — see [`libero-debug-journal.md`](libero-debug-journal.md).

@@ -145,7 +145,8 @@ uv run scripts/eval_policy_sim.py -c "$CKPT" -o "$OUT" -n 1 \
 **4. Experiments.**  
 - Train: LIBERO-10, zarr 500 demos, метрики `train_loss` / `val_loss` по эпохам.  
 - Eval: `mean_success_rate` в sim; **явно указать** `n_test`, parallelism, `n_test_vis`.  
-- Прокси-метрики без полного sim (если использовались) — CSV sweep.
+- Прокси-метрики без полного sim (если использовались) — CSV sweep.  
+- **Заполненная матрица окружения/результатов по шаблону (англ.):** см. раздел *Filled snapshot (this project, April 2026)* в [`experiments-section-template.md`](experiments-section-template.md) — можно копировать в итоговый PDF отчёта.
 
 **5. Results.** Пример: финальный `val_loss` на последней эпохе ~2.22; sim success ~22% на сокращённом `n_test=350` (не смешивать с full-500 без отдельного прогона).
 

@@ -117,3 +117,9 @@ Link the CSV path or a frozen copy in `docs/assets/` for reproducibility.
 - [`experiments-section-template.md`](experiments-section-template.md) — where these numbers land in the written report.
 - [`early-exit.md`](early-exit.md) — metric definitions and protocols.
 - [`../scripts/vast_run_early_exit.sh`](../scripts/vast_run_early_exit.sh) — default outputs: `checkpoints/early_exit_gate.pt`, `experiments/runs/sweep_gate_trained.csv`.
+
+---
+
+## 7. Filled snapshot for this repo
+
+Concrete paths, eval settings, and PNG list for the **April 2026** LIBERO policy run are written in **`experiments-section-template.md` → section *Filled snapshot (this project, April 2026)***. Use that block when pasting into the course PDF; keep this file as the **schema / plotting** reference.
