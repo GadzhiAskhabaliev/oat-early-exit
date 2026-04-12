@@ -39,5 +39,3 @@ def apply_tech_theme() -> None:
 ACCENT_CYAN = "#58d6ff"
 ACCENT_TEAL = "#3dd68c"
 ACCENT_AMBER = "#ffb454"
-ACCENT_MAGENTA = "#d2a8ff"
-ACCENT_CORAL = "#ff7b72"
