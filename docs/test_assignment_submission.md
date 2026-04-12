@@ -1,88 +1,88 @@
-# Тестовое задание: VLA-токенизация и ассистенты исследователя — материалы сдачи
+# Course test assignment: VLA tokenization and researcher assistants — submission pack
 
-Срок и формулировка задания — по тексту от проверяющих (часть 1: обзор инструментов; часть 2: исследование + отчёт по BLT / H-Net / OAT с модификацией кода и экспериментами). Ниже — **структурированная сдача всех четырёх пунктов** в одном месте; технические детали воспроизведения и гипотезы early exit см. также [`early-exit.md`](early-exit.md).
+The official brief (Part 1: tool survey; Part 2: research + report on BLT / H-Net / OAT with code changes and experiments) comes from the instructors. Below is a **structured submission of all four deliverables** in one place. Reproduction details and the early-exit hypothesis are also in [`early-exit.md`](early-exit.md).
 
-**Ссылки из задания:**  
+**Links from the assignment brief:**  
 [1] Deep Research — https://openai.com/index/introducing-deep-research/  
 [2] Claude Code — https://claude.com/product/claude-code  
 [3] AutoResearch — https://github.com/karpathy/autoresearch  
 [4] AutoResearchClaw — https://github.com/aiming-lab/AutoResearchClaw  
 [5] BLT — https://arxiv.org/abs/2412.09871v1  
 [6] H-Net — https://arxiv.org/abs/2507.07955  
-[7] OAT (код/репозиторий) — https://github.com/Chaoqi-LIU/oat  
+[7] OAT (code) — https://github.com/Chaoqi-LIU/oat  
 
 ---
 
-## Часть 1. Обзор инструментов (ассистенты исследователя)
+## Part 1. Tool survey (research assistants)
 
-### 1.1 Какие инструменты использовались на практике
+### 1.1 Tools used in practice
 
-| Инструмент | Роль в проекте | Плюсы | Минусы / риски |
-|------------|----------------|-------|----------------|
-| **Cursor (IDE + Agent)** | Основной цикл: навигация по `third_party/oat`, правки кода, поиск по репо, запуск команд, итерации по ошибкам сборки/импорта | Контекст файлов, быстрые диффы, встроенный терминал | Нужна дисциплина: не раздувать диффы; проверять гипотезы логами, а не «на глаз» |
-| **Чат-ассистент (LLM в браузере / аналог)** | Обзор статей, формулировка гипотезы «на пальцах», черновики текста отчёта | Ускоряет вход в BLT/H-Net/OAT | Галлюцинации деталей; обязательна перепроверка по arXiv/README |
-| **Git + GitHub** | Версионирование, `git push`/`pull` между локальной машиной и GPU-инстансом | Воспроизводимость, бэкап кода | Артефакты (`output/`, `*.ckpt`) в `.gitignore` — их переносить отдельно (`scp`, `tar`) |
-| **Vast.ai + SSH + tmux** | Долгое обучение и эвал без привязки к локальному ноутбуку | Дёшево относительно своего GPU | Нестабильный SSH, смена порта; риск потери диска при остановке инстанса |
-| **uv + Hydra** (экосистема OAT) | Окружение и конфиги тренировки/эвала | Повторяемые `override` | Кривая обучения: два источника правды (yaml vs shell), нужно явно документировать |
+| Tool | Role in the project | Pros | Cons / risks |
+|------|----------------------|------|----------------|
+| **Cursor (IDE + Agent)** | Main loop: navigate `third_party/oat`, edit code, search the repo, run commands, iterate on build/import errors | File context, fast diffs, integrated terminal | Discipline: avoid huge diffs; validate hypotheses with logs, not by eye |
+| **Chat assistant (browser LLM or similar)** | Paper skim, informal hypothesis shaping, draft report text | Faster onboarding for BLT/H-Net/OAT | Detail hallucinations; must cross-check arXiv/README |
+| **Git + GitHub** | Version control, `git push`/`pull` between laptop and GPU instance | Reproducibility, code backup | Artifacts (`output/`, `*.ckpt`) are `.gitignore`d — transfer separately (`scp`, `tar`) |
+| **Vast.ai + SSH + tmux** | Long train/eval without tying to a local laptop | Cheaper than owning a GPU | Unstable SSH, port changes; disk loss risk when the instance stops |
+| **uv + Hydra** (OAT stack) | Env and train/eval configs | Repeatable `override`s | Learning curve: two sources of truth (yaml vs shell) — document explicitly |
 
-### 1.2 Сопоставление с перечнем из задания
+### 1.2 Mapping to the brief’s tool list
 
-- **Deep Research [1]** — удобен для **широкого обзора** и сбора ссылок; в этом проекте роль частично перекрыта **ручным чтением arXiv + README OAT** и уточняющими запросами к чат-LLM.
-- **Claude Code [2]** — по смыслу близок к **агентному режиму в Cursor**: правки в существующем репозитории, многошаговые задачи. Явного отдельного binary «Claude Code» в пайплайне не требовалось: достаточно Cursor Agent + дисциплина коммитов.
-- **AutoResearch / AutoResearchClaw [3][4]** — замкнутый цикл «идея → код → эксперимент»; **в полном автомате не использовались** (риск скрытых ошибок на дорогом GPU-времени). Вместо этого — **ручной контур**: журнал запусков, smoke-тесты, затем длинный train.
+- **Deep Research [1]** — good for **broad surveys** and collecting links; here that role was partly covered by **manual arXiv + OAT README** plus targeted chat-LLM prompts.
+- **Claude Code [2]** — conceptually close to **Cursor agent mode**: edits in an existing repo, multi-step tasks. We did not rely on a separate “Claude Code” binary; Cursor Agent + commit discipline sufficed.
+- **AutoResearch / AutoResearchClaw [3][4]** — closed loop “idea → code → experiment”; **not used end-to-end in autopilot** (risk of silent errors on expensive GPU time). Instead we used a **manual loop**: run journal, smoke tests, then long training.
 
-**Вывод части 1:** для инженерной задачи «форк + патч + LIBERO» оптимальна связка **Cursor + git + удалённый GPU**; «авторесёрч» оставить на этап обзора литературы, а критический код и эксперименты вести **контролируемо** с логами и чекпоинтами.
-
----
-
-## Часть 2. Исследовательская линия: мотивация из статей и гипотеза
-
-### 2.1 Что делают BLT, H-Net и OAT (уровень идеи, не дословный пересказ)
-
-- **BLT [5]** — идея **локальной / иерархической** обработки и более экономного представления потока (байт-подобные паттерны, «не всё одинаково важно» на каждом шаге). Для нашей мотивации важен **пуш к адаптивному вычислению**: не разворачивать «полную мощность» всегда.
-- **H-Net [6]** — **иерархия** и декомпозиция задачи; в переносе на VLA: действие в манипуляции имеет структуру во времени (подход, хват, увод) — естественно думать о **разной длине «мысленного плана»** в токенах.
-- **OAT [7]** — **упорядоченная токенизация действий** и автогрессивная политика по дискретным action-токенам; сильная связка с **VLA**: наблюдение → последовательность токенов → действие.
-
-### 2.2 Как из этого выросла **наша** гипотеза (early exit)
-
-В задании предлагалась мысль вроде «**интеграция BLT и OAT**». В этом репозитории реализован **осмысленный прагматичный вариант**, а не буквальное объединение архитектур:
-
-> **Гипотеза:** при автогрессивной генерации **OAT action tokens** можно **раньше остановить декодирование**, если модель уже «уверена» (или хорошо восстанавливает действие по префиксу), и **догенерировать полный горизонт** только в сложных случаях — **трейдофф latency vs качество**.
-
-Это созвучно **духу** BLT/H-Net (не выделять полный бюджет вычислений / длины там, где достаточно короткого префикса) и опирается на **OAT** как на базовый AR-механизм. Детали реализации: `EarlyExitGate`, эвристика `max_prob`, правки в `transformer_cache` — см. [`early-exit.md`](early-exit.md).
-
-### 2.3 Что сделано в коде (кратко)
-
-- Расширение **`src/oat_ext/`** (gate, конфиги, тесты).
-- Патчи в **`third_party/oat/`** (инференс, policy, при необходимости workspace).
-- Скрипты: `scripts/train_oatpolicy.sh`, `scripts/eval_libero.sh`, офлайн gate / sweep — см. корневой [`README.md`](../README.md).
-
-### 2.4 Эксперименты (фактически выполненный цикл на LIBERO)
-
-1. **Обучение policy (OAT поверх готового OATTok):** стабильный рецепт FP32, 30 эпох, валидация каждую эпоху, zarr `libero10_N500`, `lazy_eval=true`. Run: `output/manual/train30_20260411_134306/`, лог `logs.json`, чекпоинт `checkpoints/latest.ckpt` (~423 MiB).
-2. **Симуляционный eval:** `eval_policy_sim.py` с CLI **`--n-test` / `--n-parallel-envs` / `--n-test-vis`** (коммит на `main`), прогон с укороченным бюджетом эпизодов для управляемого wall-clock.
-3. **Результат eval (пример успешного прогона):** `mean_success_rate_mean ≈ 0.223` при `n_test=350`, `n_parallel_envs=12`, `n_test_vis=0`; артефакт: `experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json` (на сервере; путь при копировании может отличаться).
-
-*Примечание:* полный `n_test=500` и видео-визуализация увеличивают время; для сравнения с литературой лучше отдельно зафиксировать «full eval» в отчёте.
+**Part 1 takeaway:** for an engineering task “fork + patch + LIBERO”, **Cursor + git + remote GPU** is a good fit; keep “auto-research” for literature review, and run critical code/experiments **under control** with logs and checkpoints.
 
 ---
 
-## Часть 3. Логи использования ассистентов
+## Part 2. Research thread: paper motivation and hypothesis
 
-**Требование задания:** приложить логи общения с ассистентами.
+### 2.1 What BLT, H-Net, and OAT do (idea level, not a verbatim recap)
 
-**Что приложить физически:**
+- **BLT [5]** — **local / hierarchical** processing and a more economical stream representation (byte-like patterns, “not everything matters equally” at each step). For us the key pull is **adaptive compute**: do not always deploy “full power”.
+- **H-Net [6]** — **hierarchy** and task decomposition; for VLA, manipulation unfolds in time (approach, grasp, release) — natural to think about **different “mental plan” lengths** in tokens.
+- **OAT [7]** — **ordered action tokenization** and an autoregressive policy over discrete action tokens; strong **VLA** link: observation → token sequence → action.
 
-1. **Экспорт диалогов из Cursor** (Chat / Composer / Agent) за период работы над репозиторием — в PDF или `.md` / `.txt`, файлом рядом с отчётом или ссылкой на архив.
-2. **Технический журнал запусков** на GPU: [`libero-debug-journal.md`](libero-debug-journal.md) — фиксирует команды, пути, инциденты (SSH, OOM, нулевой loss, eval), решения.
+### 2.2 How **our** hypothesis (early exit) emerged
 
-*Вставка в финальный ZIP для проверяющих:* положите, например, `exports/cursor_chat_YYYYMMDD.md` + копию `docs/libero-debug-journal.md`.
+The brief suggested something like “**integrating BLT and OAT**”. This repository implements a **meaningful pragmatic variant**, not a literal fused backbone:
+
+> **Hypothesis:** during autoregressive **OAT action-token** generation, **stop decoding earlier** when the model is already “confident” (or reconstructs the action well from a prefix), and **only complete the full horizon** in hard cases — a **latency vs quality** trade-off.
+
+This aligns with the **spirit** of BLT/H-Net (do not spend full compute / length where a short prefix suffices) and builds on **OAT** as the AR substrate. Implementation: `EarlyExitGate`, `max_prob` heuristic, `transformer_cache` — see [`early-exit.md`](early-exit.md).
+
+### 2.3 What was implemented in code (short)
+
+- Extension **`src/oat_ext/`** (gate, configs, tests).
+- Patches under **`third_party/oat/`** (inference, policy, workspace as needed).
+- Scripts: `scripts/train_oatpolicy.sh`, `scripts/eval_libero.sh`, offline gate / sweep — see root [`README.md`](../README.md).
+
+### 2.4 Experiments (LIBERO cycle we actually ran)
+
+1. **Policy training (OAT on top of a frozen OATTok):** stable FP32 recipe, 30 epochs, validation every epoch, zarr `libero10_N500`, `lazy_eval=true`. Run: `output/manual/train30_20260411_134306/`, log `logs.json`, checkpoint `checkpoints/latest.ckpt` (~423 MiB).
+2. **Simulation eval:** `eval_policy_sim.py` with CLI **`--n-test` / `--n-parallel-envs` / `--n-test-vis`** (on `main`), shorter episode budget for manageable wall-clock.
+3. **Eval outcome (example successful run):** `mean_success_rate_mean ≈ 0.223` with `n_test=350`, `n_parallel_envs=12`, `n_test_vis=0`; artifact: `experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json` (on the server; paths may differ after copy).
+
+*Note:* full `n_test=500` and video visualization increase runtime; for paper-style comparison, run and document a separate “full eval”.
 
 ---
 
-## Часть 4. Воспроизведение для проверяющих (инструкция «для Claude Code»)
+## Part 3. Assistant usage logs
 
-### 4.1 Клонирование и окружение
+**Brief requirement:** attach logs of conversations with assistants.
+
+**What to attach physically:**
+
+1. **Cursor export** (Chat / Composer / Agent) for the repo work period — PDF or `.md` / `.txt`, next to the report or as an archive link.
+2. **GPU run journal:** [`libero-debug-journal.md`](libero-debug-journal.md) — commands, paths, incidents (SSH, OOM, zero loss, eval), fixes.
+
+*For a final ZIP to graders:* e.g. `exports/cursor_chat_YYYYMMDD.md` + a copy of `docs/libero-debug-journal.md`.
+
+---
+
+## Part 4. Reproduction for graders (“Claude Code” style)
+
+### 4.1 Clone and environment
 
 ```bash
 git clone https://github.com/GadzhiAskhabaliev/oat-early-exit.git
@@ -91,19 +91,19 @@ cd oat-early-exit
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Нужны: **GPU**, **LIBERO-10 zarr** (`./scripts/download_libero10_zarr.sh` или уже скачанный `third_party/oat/data/libero/libero10_N500.zarr`), чекпоинт **OATTok** (`OAT_TOK_CKPT`).
+You need: **GPU**, **LIBERO-10 zarr** (`./scripts/download_libero10_zarr.sh` or an existing `third_party/oat/data/libero/libero10_N500.zarr`), **OATTok** checkpoint (`OAT_TOK_CKPT`).
 
-### 4.2 Обучение policy (пример)
+### 4.2 Policy training (example)
 
 ```bash
 export OAT_TOK_CKPT=/path/to/oattok_libero10.ckpt
 ./scripts/train_oatpolicy.sh
-# опционально overrides в конце строки Hydra, см. комментарии в train_oatpolicy.sh
+# optional Hydra overrides at end of line; see comments in train_oatpolicy.sh
 ```
 
-Ключевые файлы: `third_party/oat/scripts/run_workspace.py`, `third_party/oat/oat/workspace/train_policy.py`, конфиг `third_party/oat/oat/config/train_oatpolicy.yaml` + overrides из shell.
+Key files: `third_party/oat/scripts/run_workspace.py`, `third_party/oat/oat/workspace/train_policy.py`, config `third_party/oat/oat/config/train_oatpolicy.yaml` + shell overrides.
 
-### 4.3 Eval в LIBERO (с тюнингом длительности)
+### 4.3 LIBERO eval (runtime tuning)
 
 ```bash
 cd third_party/oat
@@ -118,53 +118,53 @@ uv run scripts/eval_policy_sim.py -c "$CKPT" -o "$OUT" -n 1 \
   --n-test-vis 0
 ```
 
-Полный ближе к дефолту чекпоинта: `--n-test 500 --n-parallel-envs 20 --n-test-vis 0` (дольше).
+Closer to checkpoint defaults: `--n-test 500 --n-parallel-envs 20 --n-test-vis 0` (slower).
 
-Результат: **`$OUT/eval_log.json`** (в т.ч. `mean_success_rate_mean`, `env_runner_resolved`).
+Output: **`$OUT/eval_log.json`** (includes `mean_success_rate_mean`, `env_runner_resolved`).
 
-### 4.4 Early exit (опционально)
+### 4.4 Early exit (optional)
 
-См. [`early-exit.md`](early-exit.md), `scripts/vast_run_early_exit.sh`, тесты `pytest` в `tests/`.
+See [`early-exit.md`](early-exit.md), `scripts/vast_run_early_exit.sh`, `pytest` under `tests/`.
 
 ---
 
-## Часть 5. Аналитический отчёт (черновик) + комментарий автора
+## Part 5. Analytical report (draft) + author commentary
 
-### 5.1 Черновик (структура статьи)
+### 5.1 Draft (paper skeleton)
 
-**Title (рабочее):** Adaptive early exit for autoregressive OAT action tokens in VLA-style manipulation policies.
+**Working title:** Adaptive early exit for autoregressive OAT action tokens in VLA-style manipulation policies.
 
-**Abstract.** Визуомоторные политики на базе автогрессии по дискретным action-токенам (OAT) платят стоимостью полной длины декодирования на каждом шаге управления. Мы предлагаем механизм **раннего выхода** при генерации токенов: обучаемый gate и эвристика по уверенности. Ожидаемый эффект — снижение средней латентности инференса при контролируемом риске по качеству. Реализация интегрирована в форк OAT; базовые эксперименты включают офлайн-метрики и (при наличии GPU) LIBERO sim eval.
+**Abstract.** Visuomotor policies based on autoregression over discrete action tokens (OAT) pay the cost of full decode length at every control step. We propose **early exit** during token generation: a learnable gate and a confidence heuristic. The intended effect is lower average inference latency with controlled quality risk. The implementation lives in an OAT fork; experiments include offline proxy metrics and (with GPU) LIBERO simulation eval.
 
-**1. Introduction.** VLA и токенизация действий; мотивация adaptive compute (ссылки на идеи иерархии/локальности [5][6] и ordered tokens [7]).
+**1. Introduction.** VLA and action tokenization; adaptive compute motivation (ideas from hierarchy/locality [5][6] and ordered tokens [7]).
 
-**2. Related work.** BLT, H-Net, OAT — кратко; explicit connection: **early stopping of generation** как практичный «клин» для compute.
+**2. Related work.** BLT, H-Net, OAT — briefly; explicit link: **early stopping of generation** as a practical compute lever.
 
-**3. Method.** Описание `EarlyExitGate`, KV-cache, точки в `generate()`, режимы gate vs max-prob (см. `early-exit.md`).
+**3. Method.** `EarlyExitGate`, KV cache, hooks in `generate()`, gate vs max-prob modes (see `early-exit.md`).
 
 **4. Experiments.**  
-- Train: LIBERO-10, zarr 500 demos, метрики `train_loss` / `val_loss` по эпохам.  
-- Eval: `mean_success_rate` в sim; **явно указать** `n_test`, parallelism, `n_test_vis`.  
-- Прокси-метрики без полного sim (если использовались) — CSV sweep.  
-- **Заполненная матрица окружения/результатов по шаблону (англ.):** см. раздел *Filled snapshot (this project, April 2026)* в [`experiments-section-template.md`](experiments-section-template.md) — можно копировать в итоговый PDF отчёта.
+- Train: LIBERO-10, zarr 500 demos, `train_loss` / `val_loss` per epoch.  
+- Eval: `mean_success_rate` in sim; **state explicitly** `n_test`, parallelism, `n_test_vis`.  
+- Proxy metrics without full sim (if used) — sweep CSV.  
+- **Filled environment/results matrix (English):** see *Filled snapshot (this project, April 2026)* in [`experiments-section-template.md`](experiments-section-template.md) — copy into the final PDF report.
 
-**5. Results.** Пример: финальный `val_loss` на последней эпохе ~2.22; sim success ~22% на сокращённом `n_test=350` (не смешивать с full-500 без отдельного прогона).
+**5. Results.** Example: final-epoch `val_loss` ~2.22; sim success ~22% with shortened `n_test=350` (do not mix with full-500 without a separate run).
 
-**6. Limitations.** Зависимость от качества OATTok; `lazy_eval` и отсутствие rollout-метрик при train; чекпоинтинг по `mean_success_rate` vs `val_loss` (см. обсуждение в журнале); предупреждения LIBERO `datasets` path на части установок.
+**6. Limitations.** Depends on OATTok quality; `lazy_eval` and no rollout metrics during train; checkpointing by `mean_success_rate` vs `val_loss` (see journal); LIBERO `datasets` path warnings on some installs.
 
-**7. Conclusion.** Early exit как дешёвый рычаг инженерного ускорения; дальше — калибровка gate, полный eval, измерение wall-clock.
+**7. Conclusion.** Early exit as a cheap engineering acceleration lever; next — gate calibration, full eval, wall-clock measurement.
 
-### 5.2 Комментарий автора (собственноручно — шаблон + что подставить)
+### 5.2 Author commentary (replace with your own paragraph)
 
-> **Шаблон (замените на свой текст):**  
-> «В тестовом задании я опирался на OAT как на рабочую базу для VLA-токенизации и взял мотивацию **адаптивного бюджета** из линии работ вроде BLT/H-Net не как прямое слияние архитектур, а как **исследовательский тезис**: не всегда нужна полная длина AR-декодирования. На практике основное время ушло на стабилизацию пайплайна (данные, нормализация, чекпоинты, удалённый GPU). Гипотеза early exit реализована в коде, но **главный измеримый успех текущего цикла** для меня — **ненулевой success rate в LIBERO** после длительного обучения policy; дальше я бы отдельно замерил **ускорение инференса** и ablation по gate vs heuristic. Не получилось: ___ (например, full n_test=500 в бюджет времени / автоматический top-k по val_loss без доработки конфига).»
+> **Template (replace with your own text):**  
+> “In this assignment I used OAT as the working base for VLA tokenization and took **adaptive budget** motivation from lines of work like BLT/H-Net not as a literal architecture merge, but as a **research thesis**: full AR decode length is not always necessary. In practice most time went into stabilizing the pipeline (data, normalization, checkpoints, remote GPU). The early-exit hypothesis is implemented in code, but the **main measurable win of this cycle** for me is a **non-zero LIBERO success rate** after long policy training; next I would separately measure **inference speedup** and gate vs heuristic ablations. What did not work out: ___ (e.g. full `n_test=500` within time budget / automatic top-k by `val_loss` without config work).”
 
 ---
 
-## Чеклист перед отправкой проверяющим
+## Pre-submission checklist
 
-- [ ] PDF/архив с **частью 1** (обзор инструментов) — можно этот файл + доп. таблицы.
-- [ ] **Логи ассистентов** (экспорт Cursor + `libero-debug-journal.md`).
-- [ ] **Репозиторий** (ссылка на GitHub) + этот файл в `docs/`.
-- [ ] **Отчёт**: этот раздел 5 + **1 абзац** личных выводов в конце отчёта отдельным блоком.
-- [ ] **Бэкап артефактов** (`latest.ckpt`, `eval_log.json`, `logs.json`) — вне инстанса Vast. Пошагово: раздел **«Before you delete the instance»** в корневом [`README.md`](../README.md) (`tar` → `scp` → папка `artifacts/` на ноутбуке; опционально HF Hub или Zenodo).
+- [ ] PDF/archive for **Part 1** (tool survey) — can be this file plus extra tables.
+- [ ] **Assistant logs** (Cursor export + `libero-debug-journal.md`).
+- [ ] **Repository** (GitHub link) + this file under `docs/`.
+- [ ] **Report:** Section 5 above + **one paragraph** of personal conclusions at the end of the report as its own block.
+- [ ] **Artifact backup** (`latest.ckpt`, `eval_log.json`, `logs.json`) off the Vast instance. Steps: **“Before you delete the instance”** in root [`README.md`](../README.md) (`tar` → `scp`/`rsync` → laptop `artifacts/`; optional Hugging Face Hub or Zenodo).

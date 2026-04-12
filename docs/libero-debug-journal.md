@@ -336,7 +336,7 @@ Items below were hit in practice; some are not repeated in the numbered log abov
 
 ### J) Optional tooling gaps
 
-- No universal “лишнего” beyond above: **`notebooks/.gitkeep`** is only an empty placeholder; **`.pytest_cache/`** is gitignored.
+- No other obvious cruft beyond the above: **`notebooks/.gitkeep`** is only an empty placeholder; **`.pytest_cache/`** is gitignored.
 
 ---
 

@@ -50,7 +50,7 @@ The assignment suggested **bridging** lines of work on VLA tokenization. Here, *
 | **[OAT](https://github.com/Chaoqi-LIU/oat)** | Ordered discrete **action tokens** + AR policy | The **implementation substrate** (LIBERO policy, KV cache, `generate()`) |
 
 We **do not** ship a literal fused BLT+OAT backbone. We ship a **research-grade engineering wedge**: **adaptive early exit inside OAT’s autoregressive decode** (`EarlyExitGate` or `max_prob`, Hydra toggles) — see [`docs/early-exit.md`](docs/early-exit.md).  
-Course submission packet (RU): [`docs/test_assignment_submission.md`](docs/test_assignment_submission.md).
+Course submission pack: [`docs/test_assignment_submission.md`](docs/test_assignment_submission.md).
 
 ### Visual results (report kit)
 
@@ -298,6 +298,6 @@ Schema and tables: [docs/results-and-visuals.md](docs/results-and-visuals.md).
 | Doc | Purpose |
 |-----|---------|
 | [docs/early-exit.md](docs/early-exit.md) | Pipeline, hypothesis, APIs, Hydra, limitations |
-| [docs/test_assignment_submission.md](docs/test_assignment_submission.md) | Course submission pack (RU): tools, BLT/H-Net/OAT hypothesis, logs, repro, draft report |
+| [docs/test_assignment_submission.md](docs/test_assignment_submission.md) | Course submission pack: tools, BLT/H-Net/OAT hypothesis, logs, repro, draft report |
 | [docs/experiments-section-template.md](docs/experiments-section-template.md) | Report-ready experiment skeleton |
 | [docs/results-and-visuals.md](docs/results-and-visuals.md) | Post-run artifacts, plots, README benchmark strip |
