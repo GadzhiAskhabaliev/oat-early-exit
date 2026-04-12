@@ -1,6 +1,11 @@
 """
 Usage:
-python experiments/eval_policy_sim.py --checkpoint path/to/ckpt -o path/to/output_dir
+  python scripts/eval_policy_sim.py -c path/to.ckpt -o path/to/output_dir
+
+Optional LIBERO runner overrides (wall-clock tuning):
+  --n-test INT
+  --n-parallel-envs INT
+  --n-test-vis INT
 """
 
 if __name__ == "__main__":
@@ -29,6 +34,8 @@ from oat.env_runner.base_runner import BaseRunner
 from oat.policy.base_policy import BasePolicy
 from typing import List, Optional
 
+from omegaconf import OmegaConf
+
 @click.command()
 @click.option('-c', '--checkpoint', required=True, help="either a .ckpt file or a directory containing .ckpt files")
 @click.option('-o', '--output_dir', required=True, help="output directory for eval info dump")
@@ -37,6 +44,27 @@ from typing import List, Optional
 @click.option('--temperature', default=None, type=float, help="temperature for policy inference")
 @click.option('--topk', default=None, type=int, help="topk for policy inference")
 @click.option('--use_k_tokens', default=None, type=int, help="number of tokens to use for policy inference")
+@click.option(
+    '--n-test',
+    'n_test',
+    default=None,
+    type=int,
+    help="Override cfg.task.policy.env_runner.n_test (episodes). Lower = faster eval.",
+)
+@click.option(
+    '--n-parallel-envs',
+    'n_parallel_envs',
+    default=None,
+    type=int,
+    help="Override cfg.task.policy.env_runner.n_parallel_envs (LIBERO runner).",
+)
+@click.option(
+    '--n-test-vis',
+    'n_test_vis',
+    default=None,
+    type=int,
+    help="Override cfg.task.policy.env_runner.n_test_vis (fewer videos = faster).",
+)
 def eval_policy_sim(
     checkpoint: str,
     output_dir: str,
@@ -46,6 +74,9 @@ def eval_policy_sim(
     temperature: Optional[float] = None,
     topk: Optional[int] = None,
     use_k_tokens: Optional[int] = None,
+    n_test: Optional[int] = None,
+    n_parallel_envs: Optional[int] = None,
+    n_test_vis: Optional[int] = None,
 ):
     if os.path.exists(output_dir):
         click.confirm(f"Output path {output_dir} already exists! Overwrite?", abort=True)
@@ -75,6 +106,23 @@ def eval_policy_sim(
         
         # load checkpoint
         policy, cfg = BasePolicy.from_checkpoint(ckpt, return_configuration=True)
+
+        runner_overrides = {}
+        if n_test is not None:
+            cfg.task.policy.env_runner.n_test = int(n_test)
+            runner_overrides['n_test'] = int(n_test)
+        if n_parallel_envs is not None:
+            cfg.task.policy.env_runner.n_parallel_envs = int(n_parallel_envs)
+            runner_overrides['n_parallel_envs'] = int(n_parallel_envs)
+        if n_test_vis is not None:
+            cfg.task.policy.env_runner.n_test_vis = int(n_test_vis)
+            runner_overrides['n_test_vis'] = int(n_test_vis)
+        if runner_overrides:
+            print(f"env_runner overrides: {runner_overrides}")
+            print(
+                "effective env_runner:",
+                OmegaConf.to_yaml(cfg.task.policy.env_runner, resolve=True),
+            )
         
         device = torch.device(device)
         policy.to(device)
@@ -136,6 +184,11 @@ def eval_policy_sim(
         json_log = dict()
         json_log['checkpoint'] = ckpt
         json_log['num_exp'] = num_exp
+        if runner_overrides:
+            json_log['env_runner_cli_overrides'] = runner_overrides
+        json_log['env_runner_resolved'] = OmegaConf.to_container(
+            cfg.task.policy.env_runner, resolve=True
+        )
         
         # Add mean values
         for key, value in mean_log.items():
