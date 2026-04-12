@@ -67,7 +67,7 @@ Illustrative PNGs (dark theme, English labels). **Synthetic demo fixtures** ship
 | Path | Contents |
 |------|----------|
 | `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
-| `scripts/` | Install, offline gate, sweeps, `plot_*.py`, `generate_report_assets.py`, `plot_real_bundle.sh`, `push_checkpoint_to_hf.py`, eval helpers |
+| `scripts/` | Install, offline gate, sweeps, `plot_*.py`, `generate_report_assets.py`, `plot_real_bundle.sh`, `tar_lab_backup.sh`, `push_checkpoint_to_hf.py`, eval helpers |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
 | `docs/` | `early-exit.md`, `assets/` (figures), `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
@@ -228,6 +228,12 @@ tar -czvf ~/oat_lab_backup.tgz \
 ```
 
 Add Hydra overrides, `tmux` logs, or extra paths by appending more arguments before `"${RUN_CSVS[@]}"`.
+
+**1b. Same thing, one script** (defaults match `train30_20260411_134306` + `eval_libero_7to8h_20260412_112444`; override with `OAT_BACKUP_*` env vars — see `scripts/tar_lab_backup.sh`):
+
+```bash
+cd ~/oat-early-exit && git pull origin main && ./scripts/tar_lab_backup.sh
+```
 
 **2. Copy to your laptop** (from your machine, not from inside SSH):
 
