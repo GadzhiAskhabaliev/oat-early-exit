@@ -67,7 +67,7 @@ Illustrative PNGs (dark theme, English labels). **Synthetic demo fixtures** ship
 | Path | Contents |
 |------|----------|
 | `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
-| `scripts/` | Install, offline gate, sweeps, `plot_sweep_csv.py`, `plot_training_logs.py`, `plot_eval_log.py`, `generate_report_assets.py`, `push_checkpoint_to_hf.py`, eval helpers |
+| `scripts/` | Install, offline gate, sweeps, `plot_*.py`, `generate_report_assets.py`, `plot_real_bundle.sh`, `push_checkpoint_to_hf.py`, eval helpers |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
 | `docs/` | `early-exit.md`, `assets/` (figures), `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
@@ -273,6 +273,14 @@ Use your real sweep output:
 python scripts/plot_sweep_csv.py --csv experiments/runs/sweep_gate.csv --out docs/assets/figure_early_exit_sweep.png
 python scripts/plot_training_logs.py --logs path/to/logs.json --out docs/assets/figure_training_curves.png
 python scripts/plot_eval_log.py --eval-log path/to/eval_log.json --out docs/assets/figure_eval_summary.png
+```
+
+**Copy from the GPU box, then plot (same style):** on your laptop create `artifacts/server_run/`, `scp` `logs.json` + `eval_log.json` (and optional sweep CSV) into it, then from repo root:
+
+```bash
+./scripts/plot_real_bundle.sh ./artifacts/server_run
+# with early-exit sweep CSV:
+./scripts/plot_real_bundle.sh ./artifacts/server_run ./artifacts/server_run/sweep_gate.csv
 ```
 
 Schema and tables: [docs/results-and-visuals.md](docs/results-and-visuals.md).
