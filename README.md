@@ -12,6 +12,18 @@
                                  gate | max-p
 ```
 
+<p align="center">
+  <a href="https://github.com/GadzhiAskhabaliev/oat-early-exit"><img alt="Repo" src="https://img.shields.io/badge/repo-oat--early--exit-161b22?style=for-the-badge&logo=github&labelColor=0b0f14"></a>
+  <a href="https://huggingface.co/hackhackhack66666/oat-libero-policy-early-exit"><img alt="HF weights" src="https://img.shields.io/badge/weights-HuggingFace-ffcc4d?style=for-the-badge&logo=huggingface&logoColor=1a1a1a&labelColor=0b0f14"></a>
+  <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/badge/python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white&labelColor=0b0f14"></a>
+</p>
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2412.09871v1"><img alt="BLT" src="https://img.shields.io/badge/paper-BLT-58a6ff?style=for-the-badge&logo=arxiv&logoColor=white&labelColor=0b0f14"></a>
+  <a href="https://arxiv.org/abs/2507.07955"><img alt="H-Net" src="https://img.shields.io/badge/paper-H--Net-3fb950?style=for-the-badge&logo=arxiv&logoColor=white&labelColor=0b0f14"></a>
+  <a href="https://github.com/Chaoqi-LIU/oat"><img alt="OAT" src="https://img.shields.io/badge/code-OAT-d2a8ff?style=for-the-badge&logo=github&logoColor=white&labelColor=0b0f14"></a>
+</p>
+
 </div>
 
 ---
@@ -27,9 +39,26 @@
 
 ---
 
-## Research framing (BLT · H-Net · OAT)
+## Research framing (BLT · H-Net · OAT → early exit)
 
-This fork sits at the **intersection of ideas** from recent work on **adaptive / structured token streams** and **VLA-style action tokenization**: [BLT](https://arxiv.org/abs/2412.09871v1) motivates *not spending full compute everywhere*; [H-Net](https://arxiv.org/abs/2507.07955) suggests *hierarchical structure* in long-horizon behaviour; [OAT](https://github.com/Chaoqi-LIU/oat) provides the **ordered autoregressive action-token policy** we actually run in LIBERO. We do **not** ship a literal merged BLT+OAT architecture; we implement a **pragmatic hypothesis**—**adaptive early exit during AR decode**—as the engineering “wedge” (see [`docs/early-exit.md`](docs/early-exit.md)). Course-style submission notes in Russian: [`docs/TEST_ASSIGNMENT_SUBMISSION.md`](docs/TEST_ASSIGNMENT_SUBMISSION.md).
+The assignment suggested **bridging** lines of work on VLA tokenization. Here, **early exit** is the concrete hypothesis you get when you read the three references together:
+
+| Paper | Takeaway we borrow | How it maps to this repo |
+|-------|---------------------|---------------------------|
+| **[BLT](https://arxiv.org/abs/2412.09871v1)** | Adaptive compute — not every step needs the same depth / budget | Stop AR decoding early when the model is already “good enough” |
+| **[H-Net](https://arxiv.org/abs/2507.07955)** | Hierarchy — long-horizon structure in behaviour | Treat the **token horizon** as a budget: short prefix for easy phases, full length when hard |
+| **[OAT](https://github.com/Chaoqi-LIU/oat)** | Ordered discrete **action tokens** + AR policy | The **implementation substrate** (LIBERO policy, KV cache, `generate()`) |
+
+We **do not** ship a literal fused BLT+OAT backbone. We ship a **research-grade engineering wedge**: **adaptive early exit inside OAT’s autoregressive decode** (`EarlyExitGate` or `max_prob`, Hydra toggles) — see [`docs/early-exit.md`](docs/early-exit.md).  
+Course submission packet (RU): [`docs/TEST_ASSIGNMENT_SUBMISSION.md`](docs/TEST_ASSIGNMENT_SUBMISSION.md).
+
+### Visual results (report kit)
+
+Illustrative PNGs (dark theme, English labels). **Synthetic demo fixtures** ship in-repo so GitHub always renders something meaningful; replace with your artifacts and rerun `python scripts/generate_report_assets.py` or the individual `scripts/plot_*.py` tools.
+
+| Early-exit sweep (proxy) | Training curves | LIBERO eval snapshot |
+|--------------------------|-----------------|----------------------|
+| ![](docs/assets/figure_early_exit_sweep.png) | ![](docs/assets/figure_training_curves.png) | ![](docs/assets/figure_eval_summary.png) |
 
 ---
 
@@ -38,9 +67,9 @@ This fork sits at the **intersection of ideas** from recent work on **adaptive /
 | Path | Contents |
 |------|----------|
 | `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
-| `scripts/` | Install, offline gate training, threshold sweeps, `vast_run_early_exit.sh`, `plot_sweep_csv.py`, `push_checkpoint_to_hf.py`, eval helpers |
+| `scripts/` | Install, offline gate, sweeps, `plot_sweep_csv.py`, `plot_training_logs.py`, `plot_eval_log.py`, `generate_report_assets.py`, `push_checkpoint_to_hf.py`, eval helpers |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
-| `docs/` | `early-exit.md`, `experiments-section-template.md`, `results-and-visuals.md` |
+| `docs/` | `early-exit.md`, `assets/` (figures), `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
 
 ---
@@ -231,7 +260,22 @@ Omit `--create-repo` if the model repo already exists on Hugging Face. Add `--pr
 
 ### English figures for reports / slides
 
-Use [docs/results-and-visuals.md](docs/results-and-visuals.md): Pareto-style plots (threshold vs early-exit rate vs proxy MSE), training curves, optional LIBERO success bars. **Set axis titles and legends in English** in `scripts/plot_sweep_csv.py` (or post-process labels) and save under `docs/assets/` (create the folder if missing), then embed in README or the PDF report.
+Regenerate everything from bundled **demo** CSV / logs / eval JSON:
+
+```bash
+pip install matplotlib
+python scripts/generate_report_assets.py
+```
+
+Use your real sweep output:
+
+```bash
+python scripts/plot_sweep_csv.py --csv experiments/runs/sweep_gate.csv --out docs/assets/figure_early_exit_sweep.png
+python scripts/plot_training_logs.py --logs path/to/logs.json --out docs/assets/figure_training_curves.png
+python scripts/plot_eval_log.py --eval-log path/to/eval_log.json --out docs/assets/figure_eval_summary.png
+```
+
+Schema and tables: [docs/results-and-visuals.md](docs/results-and-visuals.md).
 
 ---
 
@@ -240,6 +284,6 @@ Use [docs/results-and-visuals.md](docs/results-and-visuals.md): Pareto-style plo
 | Doc | Purpose |
 |-----|---------|
 | [docs/early-exit.md](docs/early-exit.md) | Pipeline, hypothesis, APIs, Hydra, limitations |
-| [docs/TEST_ASSIGNMENT_SUBMISSION.md](docs/TEST_ASSIGNMENT_SUBMISSION.md) | Сдача тестового задания: инструменты, гипотеза BLT/H-Net/OAT, логи, repro, черновик отчёта |
+| [docs/TEST_ASSIGNMENT_SUBMISSION.md](docs/TEST_ASSIGNMENT_SUBMISSION.md) | Course submission pack (RU): tools, BLT/H-Net/OAT hypothesis, logs, repro, draft report |
 | [docs/experiments-section-template.md](docs/experiments-section-template.md) | Report-ready experiment skeleton |
 | [docs/results-and-visuals.md](docs/results-and-visuals.md) | Post-run artifacts, plots, README benchmark strip |

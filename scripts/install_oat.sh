@@ -3,13 +3,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OAT="${ROOT}/third_party/oat"
 
-# uv из стандартной установки (curl https://astral.sh/uv/install.sh)
+# uv: https://docs.astral.sh/uv/ (curl install script)
 export PATH="${HOME}/.local/bin:${PATH}"
 
 cd "${OAT}"
 
 if command -v uv >/dev/null 2>&1; then
-  echo "==> CMake для сборки egl-probe (robomimic): pip-пакет cmake + CMAKE_POLICY_VERSION_MINIMUM"
+  echo "==> CMake for egl-probe (robomimic): pip cmake + CMAKE_POLICY_VERSION_MINIMUM"
   cd "${OAT}"
   if [ ! -d .venv ]; then
     uv venv
@@ -17,20 +17,20 @@ if command -v uv >/dev/null 2>&1; then
   uv pip install cmake --python .venv/bin/python
   CMAKE_BIN="$(.venv/bin/python -c "import pathlib, cmake; print(pathlib.Path(cmake.__file__).parent / 'data' / 'bin')")"
   export PATH="${CMAKE_BIN}:${PATH}"
-  # CMake 4.x: старый CMakeLists.txt в egl-probe требует политику >=3.5
+  # CMake 4.x: legacy egl-probe CMakeLists needs policy >=3.5
   export CMAKE_POLICY_VERSION_MINIMUM=3.5
 
   echo "==> uv sync + editable install"
   uv sync
   uv pip install -e .
 else
-  echo "uv не найден. Установите: https://docs.astral.sh/uv/"
-  echo "Либо: cd \"${OAT}\" && pip install -e .  (может потребовать ручной установки зависимостей из pyproject.toml)"
+  echo "uv not found. Install: https://docs.astral.sh/uv/"
+  echo "Or: cd \"${OAT}\" && pip install -e .  (you may need to resolve deps from pyproject.toml manually)"
   exit 1
 fi
 
-echo "==> Зависимости лаборатории (pytest, omegaconf) в venv OAT"
+echo "==> Lab extras (pytest, omegaconf, …) into OAT venv"
 cd "${ROOT}"
 uv pip install -r requirements.txt --python "${OAT}/.venv/bin/python"
 
-echo "Готово. Baseline: scripts/train_baseline.sh"
+echo "Done. Baseline: scripts/train_baseline.sh"

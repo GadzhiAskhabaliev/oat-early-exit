@@ -1,0 +1,10 @@
+{
+  "checkpoint": "third_party/oat/output/manual/train30_20260411_134306/checkpoints/latest.ckpt",
+  "mean_success_rate_mean": 0.222857,
+  "num_exp": 1,
+  "env_runner_resolved": {
+    "n_test": 350,
+    "n_parallel_envs": 12,
+    "n_test_vis": 0
+  }
+}

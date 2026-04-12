@@ -6,11 +6,11 @@ Why this exists:
 - Long one-liners break when pasted through SSH clients.
 - We want a stable way to print token diversity + CE loss on a single batch.
 
-Typical remote usage (PATH + uv + CKPT сами):
+Typical remote usage (PATH + uv + CKPT handled by wrapper):
   cd ~/oat-early-exit && ./scripts/run_diag_libero_tokens.sh
   ./scripts/run_diag_libero_tokens.sh --reset-policy-weights
 
-Ручной вариант:
+Manual one-liner:
   cd third_party/oat
   export PATH="$HOME/.local/bin:$PATH"
   export PYTHONPATH="$HOME/oat-early-exit/src:${PYTHONPATH:-}"

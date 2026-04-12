@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Один вход для диагностики LIBERO-токенов на Vast/SSH без ручного PATH и без uv в tmux.
+# Single entrypoint for LIBERO token diagnostics on Vast/SSH (PATH + uv handled).
 #
-# Из корня репо:
+# From repo root:
 #   ./scripts/run_diag_libero_tokens.sh
 #   CKPT=/path/to/latest.ckpt ./scripts/run_diag_libero_tokens.sh
 #   ./scripts/run_diag_libero_tokens.sh --reset-policy-weights
@@ -26,8 +26,8 @@ pick_python() {
     echo "${OAT}/.venv/bin/python"
     return
   fi
-  echo "Error: ни uv (~/.local/bin), ни ${OAT}/.venv/bin/python не найдены." >&2
-  echo "Запусти с сервера: cd ${ROOT} && ./scripts/install_oat.sh" >&2
+  echo "Error: neither uv (~/.local/bin) nor ${OAT}/.venv/bin/python found." >&2
+  echo "On the server run: cd ${ROOT} && ./scripts/install_oat.sh" >&2
   exit 1
 }
 
@@ -42,7 +42,7 @@ if [[ -z "${CKPT:-}" ]]; then
   CKPT="$(find output/manual -type f -name '*.ckpt' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)"
 fi
 if [[ -z "${CKPT}" ]]; then
-  echo "Error: нет CKPT. Задай явно:" >&2
+  echo "Error: no CKPT. Set explicitly:" >&2
   echo "  CKPT=/path/to/latest.ckpt ${ROOT}/scripts/run_diag_libero_tokens.sh" >&2
   exit 1
 fi

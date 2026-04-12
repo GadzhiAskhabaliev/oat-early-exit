@@ -19,6 +19,17 @@
 
 After a Vast run, **copy** the sweep CSV and a short **run manifest** (YAML or markdown snippet) into a safe place before the instance is destroyed.
 
+### 1.1 Regenerate README figures (demo fixtures)
+
+The repo ships **synthetic** CSV / JSONL under `docs/assets/fixtures/` plus three dark-theme PNGs used by the main README. Rebuild them anytime:
+
+```bash
+pip install matplotlib
+python scripts/generate_report_assets.py
+```
+
+Swap in your real `logs.json`, `eval_log.json`, or sweep CSV and call `scripts/plot_sweep_csv.py`, `plot_training_logs.py`, or `plot_eval_log.py` directly (see root `README.md`).
+
 ---
 
 ## 2. Sweep CSV schema (`sweep_early_exit.py`)

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Обучение OAT policy (train_oatpolicy) поверх готового OATTok чекпоинта.
-# Для Vast/headless: по умолчанию OAT_DISABLE_WANDB=1 и copy_to_memory=false (меньше RAM).
+# Train OAT policy (train_oatpolicy) on top of a frozen OATTok checkpoint.
+# For Vast/headless: defaults OAT_DISABLE_WANDB=1 and copy_to_memory=false (lower RAM).
 #
-# Нужны: libero10 zarr (third_party/oat/data/libero/libero10_N500.zarr), GPU, uv/.venv из install_oat.sh.
+# Needs: libero10 zarr (third_party/oat/data/libero/libero10_N500.zarr), GPU, uv/.venv from install_oat.sh.
 #
-# Пример:
+# Example:
 #   export OAT_TOK_CKPT=/root/oattok_libero10.ckpt
 #   ./scripts/train_oatpolicy.sh
-# По умолчанию запускается "стабильный" рецепт:
+# Default "stable" recipe:
 #   bf16 off, num_epochs=30, val/checkpoint every epoch, resume=false.
-# Любой параметр можно переопределить Hydra-override в конце:
+# Override any Hydra key at the end of the command line, e.g.:
 #   ./scripts/train_oatpolicy.sh training.num_epochs=10 training.allow_bf16=true
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

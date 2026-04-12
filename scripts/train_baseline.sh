@@ -7,9 +7,9 @@ export PYTHONPATH="${ROOT}/src:${PYTHONPATH:-}"
 export OAT_DISABLE_WANDB="${OAT_DISABLE_WANDB:-1}"
 
 cd "${OAT}"
-# Нужен датасет libero10 zarr (third_party/oat/README.md).
-# Обучение рассчитано на GPU (CUDA): --num_processes = число используемых GPU.
-# Одна карта: оставьте --num_processes 1; при необходимости: CUDA_VISIBLE_DEVICES=0
+# Requires libero10 zarr (see third_party/oat/README.md).
+# Training expects CUDA: --num_processes is the number of GPUs to use.
+# Single GPU: keep --num_processes 1; optionally pin with CUDA_VISIBLE_DEVICES=0
 HYDRA_FULL_ERROR=1 uv run accelerate launch \
   --num_processes 1 \
   scripts/run_workspace.py \
