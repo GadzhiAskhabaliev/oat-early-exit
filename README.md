@@ -38,7 +38,7 @@ This fork sits at the **intersection of ideas** from recent work on **adaptive /
 | Path | Contents |
 |------|----------|
 | `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
-| `scripts/` | Install, offline gate training, threshold sweeps, `vast_run_early_exit.sh`, `plot_sweep_csv.py`, eval helpers |
+| `scripts/` | Install, offline gate training, threshold sweeps, `vast_run_early_exit.sh`, `plot_sweep_csv.py`, `push_checkpoint_to_hf.py`, eval helpers |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
 | `docs/` | `early-exit.md`, `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
@@ -209,7 +209,23 @@ mkdir -p artifacts && tar -xzvf oat_lab_backup.tgz -C artifacts
 
 Keep `artifacts/` **local** (it is gitignored). For examiners, attach **`oat_lab_backup.tgz`** or a subset (ckpt + `eval_log.json` + `logs.json`) to email / cloud / Zenodo.
 
-**3. Hugging Face Hub (optional)** — good for sharing a **policy** checkpoint with a short Model Card (what data, `n_test`, commit hash). Use **Git LFS** for `*.ckpt` or `huggingface_hub` `upload_file`; check your **storage quota** (large files can exceed free tiers). This repo does not automate uploads.
+**3. Hugging Face Hub (optional)** — upload from the server with the bundled script (uses resumable `upload_file`; no Git LFS clone needed on the instance):
+
+```bash
+export HF_TOKEN=hf_...   # https://huggingface.co/settings/tokens  (read + write on model repos)
+
+cd /path/to/oat-early-exit
+# once: ./scripts/install_oat.sh   # pulls huggingface_hub from requirements.txt
+
+third_party/oat/.venv/bin/python scripts/push_checkpoint_to_hf.py \
+  --repo-id YOUR_USERNAME/oat-libero-policy \
+  --create-repo \
+  --checkpoint third_party/oat/output/manual/train30_20260411_134306/checkpoints/latest.ckpt \
+  --train-log third_party/oat/output/manual/train30_20260411_134306/logs.json \
+  --eval-log experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json
+```
+
+Omit `--create-repo` if the model repo already exists on Hugging Face. Add `--private` with `--create-repo` for a private repo. Check **storage quota** on free tiers (~400 MiB checkpoints are usually fine).
 
 **4. Long-term archive** — if HF is awkward, **[Zenodo](https://zenodo.org/)** (or institutional storage) for a single `.tgz` is often simpler for coursework.
 
