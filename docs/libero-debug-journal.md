@@ -8,16 +8,25 @@ This file tracks the real run history on Vast.ai for the OAT policy lab, includi
 - Goal: get a stable policy training pipeline and non-zero evaluation success
 - Environment: Vast.ai remote GPU via SSH + tmux
 
-## Current Status (2026-04-11)
+## Current Status
+
+### Historical (2026-04-11) — quick eval gate failed
 
 - Quick evaluation finished successfully from infrastructure perspective.
-- Result is bad from model quality perspective:
+- Result was bad from model quality perspective:
   - `mean_success_rate = 0.0`
   - all 10 LIBERO tasks in the quick-eval JSON are `0.0`.
-- Decision: this checkpoint is not accepted as final.
-- Latest confirmed quick-eval artifact:
+- Decision at the time: that checkpoint was not accepted as final.
+- Artifacts mentioned then:
   - `/root/oat-early-exit/experiments/runs/eval_libero_quick_fast/eval_log_quick.json`
-  - terminal output confirms `mean_success_rate: 0.0`.
+  - `/root/oat-early-exit/experiments/runs/eval_libero_quick/eval_log_quick.json`
+
+### Final pipeline outcome (2026-04-12) — for lab reviewers
+
+- **Policy training:** stable 30-epoch FP32 run `train30_20260411_134306` under `third_party/oat/output/manual/…`, `logs.json` ~9 MB, `val_loss` tracked per epoch (see `README` / submission doc for metrics narrative).
+- **Simulator eval:** `experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json` — `mean_success_rate_mean ≈ 0.223` with **`n_test=350`**, `n_parallel_envs=12`, `n_test_vis=0` (shorter than default 500 for wall-clock; metric is an estimate, not comparable to full-500 tables without a separate run).
+- **Artifacts off-instance:** checkpoint + logs + eval pushed to **Hugging Face** (`hackhackhack66666/oat-libero-policy-early-exit`); local **`oat_lab_backup_*.tgz`** on laptop mirrors `latest.ckpt`, `logs.json`, `eval_log.json`.
+- **Figures:** real `logs.json` / `eval_log.json` plotted to `docs/assets/figure_training_curves.png` and `figure_eval_summary.png`; sweep panel may remain **synthetic** until a real `sweep_early_exit.py` CSV exists.
 
 ## Confirmed Observations
 
@@ -273,3 +282,75 @@ From repo root (after `git pull`):
   4. `diag_libero_tokens.py`: run **`policy.eval()`** and keep **`action_tokenizer.eval()`** — a whole-policy `.train()` enables dropout inside the frozen tokenizer transformer and can distort encoder probes; encoder probe runs under **autocast disabled** for stable floats.
 
 - **Corrupt OATTok on disk:** if `/root/oattok_libero10.ckpt` (or any ref) still has `|encoder.head.proj|_1≈0` after reload, no policy-side fix can recover it — retrain `train_oattok`. `scripts/inspect_oattok_ckpt.py` checks this in one command; `BasePolicy.from_checkpoint` now **raises** unless `OAT_SKIP_TOK_HEAD_SANITY=1`.
+
+---
+
+## Additional issues & ops notes (for lab review)
+
+Items below were hit in practice; some are not repeated in the numbered log above.
+
+### A) LIBERO / dataset path warning during eval
+
+- **Symptom:** log line that `…/datasets` does not exist (or similar).
+- **Impact:** in our runs eval **continued** and completed; treat as environment warning unless eval aborts.
+- **Action:** document path; optional fix is aligning LIBERO install / env vars per upstream README.
+
+### B) Eval progress counter vs `n_test`
+
+- **Symptom:** tqdm text like `Eval … 10/30` while `n_test=350`.
+- **Explanation:** runner advances in **chunks** of parallel envs; number of steps is **`ceil(n_test / n_parallel_envs)`**, not `n_test`. Not a hang.
+
+### C) Eval does not train the policy
+
+- Full LIBERO sim eval **only measures** success; it does **not** update weights. Shorter `n_test` changes **statistical estimate** and wall-clock, not “partial training”.
+
+### D) Reading overfitting / health — use `val_loss`
+
+- Do not infer training health from the **last few `train_loss` lines** alone; compare **epoch-end** `val_loss` (and curves in `logs.json`).
+
+### E) Git / GitHub vs large artifacts
+
+- `output/`, `*.ckpt`, `experiments/runs/` are **`.gitignore`d** by design; `git pull` will not restore checkpoints.
+- **Backup strategy used:** Hugging Face Hub + single **`tar`** of `latest.ckpt` + `logs.json` + `eval_log.json`, copied off the instance with **`rsync -avP`** (resume) when **`scp` stalled at 0 B/s** on ~400 MB.
+
+### F) SSH / Vast.ai
+
+- Minimal `ssh -p … root@IP` **without** `-i ~/.ssh/…`** can fail auth; add **`-4`**, **`ConnectTimeout`**, **`ServerAliveInterval`**, and correct **key**.
+- After **instance stop/start**, **IP and port often change** — always copy the fresh `ssh` string from the Vast UI.
+
+### G) Shell hygiene on reconnect
+
+- **`uv` not in PATH** in a new tmux pane → `export PATH="$HOME/.local/bin:$PATH"` (or use repo scripts that set it).
+- **`$LOG` / `$CKPT` empty** after opening a new shell → re-export before `grep "$LOG"` or eval commands.
+- **`rg` missing** on minimal Ubuntu images → use **`grep -r`**.
+- **Duplicate tmux session names** (`eval_libero` twice) → confusing attaches; use **unique session names** per job.
+
+### H) Hugging Face CLI / tokens
+
+- **`export HF_TOKEN= hf_…`** (space after `=`) sets an **empty** token and breaks auth — must be **`export HF_TOKEN=hf_…`** (no space) or use quotes.
+- If a token was pasted into a **shared log or chat**, **revoke** it on https://huggingface.co/settings/tokens and create a new one.
+
+### I) `tmux` / process hygiene (duplicate of §2, emphasis)
+
+- Before long retrains: **`pkill`** stale `run_workspace.py` / eval processes; one train + one eval **session** naming convention.
+
+### J) Optional tooling gaps
+
+- No universal “лишнего” beyond above: **`notebooks/.gitkeep`** is only an empty placeholder; **`.pytest_cache/`** is gitignored.
+
+---
+
+## Reviewer quick index
+
+| Topic | Where in this file |
+|------|---------------------|
+| SSH / timeouts | §1, §F |
+| OOM / `copy_to_memory` | §3 |
+| WandB headless | §4 |
+| CUDA / reboot | §5 |
+| Zero / degenerate loss | §6, §“Implemented Code Fix”, §“Root-cause fix” |
+| Normalizer / tokenizer collapse | §“Root-cause fix”, §diag script |
+| `from_checkpoint` vs training parity | §“Follow-up fix” |
+| Eval long / chunks / not training | §9, §B, §C |
+| HF / token / backup | §H, §E |
+| Final numbers & paths | **“Final pipeline outcome (2026-04-12)”** |
