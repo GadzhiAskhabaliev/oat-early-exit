@@ -101,7 +101,7 @@ Copy or merge this block into the PDF report if you want the template **already 
 
 | # | Status | Notes |
 |---|--------|------|
-| 1–3 | **Partial** | Offline gate + `sweep_early_exit.py` are supported in repo; a **real sweep CSV** was not committed to git. README sweep figure may still use the **synthetic** fixture until you export CSV from a GPU run and regenerate `docs/assets/figure_early_exit_sweep.png`. |
+| 1–3 | **Partial** | Offline gate + `sweep_early_exit.py` are supported in repo; a real sweep CSV was not committed in this submission snapshot. |
 
 ### Protocol B (LIBERO sim) — filled
 
@@ -130,7 +130,6 @@ Copy or merge this block into the PDF report if you want the template **already 
 |--------|------|
 | Training / validation loss | `docs/assets/figure_training_curves.png` |
 | Eval summary bar | `docs/assets/figure_eval_summary.png` |
-| Early-exit sweep (demo until real CSV) | `docs/assets/figure_early_exit_sweep.png` |
 
 ### Limitations (this run)
 

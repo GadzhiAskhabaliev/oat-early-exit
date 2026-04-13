@@ -54,11 +54,11 @@ Course submission pack: [`docs/test_assignment_submission.md`](docs/test_assignm
 
 ### Visual results (report kit)
 
-Illustrative PNGs (dark theme, English labels). The **sweep** panel uses a small **synthetic** CSV in `docs/assets/fixtures/` (regen: `python scripts/generate_report_assets.py`). **Train / eval** figures should come from your real `logs.json` and `eval_log.json` (`plot_real_bundle.sh` or `plot_*.py`).
+Committed figures in this repo are the **real** training/eval plots generated from run artifacts:
 
-| Early-exit sweep (proxy) | Training curves | LIBERO eval snapshot |
-|--------------------------|-----------------|----------------------|
-| ![](docs/assets/figure_early_exit_sweep.png) | ![](docs/assets/figure_training_curves.png) | ![](docs/assets/figure_eval_summary.png) |
+| Training curves | LIBERO eval snapshot |
+|-----------------|----------------------|
+| ![](docs/assets/figure_training_curves.png) | ![](docs/assets/figure_eval_summary.png) |
 
 ---
 
@@ -67,7 +67,7 @@ Illustrative PNGs (dark theme, English labels). The **sweep** panel uses a small
 | Path | Contents |
 |------|----------|
 | `src/oat_ext/` | `EarlyExitGate`, supervision helpers, config merge |
-| `scripts/` | Install, offline gate, sweeps, `plot_*.py`, `generate_report_assets.py`, `plot_real_bundle.sh`, `tar_lab_backup.sh`, `push_checkpoint_to_hf.py`, eval helpers |
+| `scripts/` | Install, offline gate, sweeps, `plot_*.py`, `plot_real_bundle.sh`, `tar_lab_backup.sh`, `push_checkpoint_to_hf.py`, eval helpers |
 | `tests/` | `pytest` for `oat_ext` (see `pytest.ini` → `pythonpath = src`) |
 | `docs/` | `early-exit.md`, `assets/` (figures), `experiments-section-template.md`, `results-and-visuals.md` |
 | `third_party/oat/` | Vendored OAT with local modifications |
@@ -266,17 +266,9 @@ Omit `--create-repo` if the model repo already exists on Hugging Face. Add `--pr
 
 ### English figures for reports / slides
 
-Regenerate **only** the synthetic **sweep** figure (does not overwrite train/eval PNGs):
+Use your real run artifacts:
 
 ```bash
-pip install matplotlib
-python scripts/generate_report_assets.py
-```
-
-Use your real sweep output:
-
-```bash
-python scripts/plot_sweep_csv.py --csv experiments/runs/sweep_gate.csv --out docs/assets/figure_early_exit_sweep.png
 python scripts/plot_training_logs.py --logs path/to/logs.json --out docs/assets/figure_training_curves.png
 python scripts/plot_eval_log.py --eval-log path/to/eval_log.json --out docs/assets/figure_eval_summary.png
 ```
@@ -285,8 +277,6 @@ python scripts/plot_eval_log.py --eval-log path/to/eval_log.json --out docs/asse
 
 ```bash
 ./scripts/plot_real_bundle.sh ./artifacts/server_run
-# with early-exit sweep CSV:
-./scripts/plot_real_bundle.sh ./artifacts/server_run ./artifacts/server_run/sweep_gate.csv
 ```
 
 Schema and tables: [docs/results-and-visuals.md](docs/results-and-visuals.md).

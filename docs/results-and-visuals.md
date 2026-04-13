@@ -19,16 +19,7 @@
 
 After a Vast run, **copy** the sweep CSV and a short **run manifest** (YAML or markdown snippet) into a safe place before the instance is destroyed.
 
-### 1.1 Regenerate the synthetic sweep figure
-
-`docs/assets/fixtures/demo_sweep_maxprob.csv` plus `figure_early_exit_sweep.png` can be rebuilt anytime:
-
-```bash
-pip install matplotlib
-python scripts/generate_report_assets.py
-```
-
-That script **does not** overwrite training or eval PNGs. For real curves, use `scripts/plot_training_logs.py`, `plot_eval_log.py`, or `scripts/plot_real_bundle.sh` (see root `README.md`).
+Use `scripts/plot_training_logs.py`, `scripts/plot_eval_log.py`, and optionally `scripts/plot_sweep_csv.py` on **real** run artifacts copied from your GPU box.
 
 ---
 

@@ -53,10 +53,7 @@ def main() -> None:
     apply_tech_theme()
     out = args.out
     if out is None:
-        if "fixtures" in str(args.csv):
-            out = Path(__file__).resolve().parents[1] / "docs" / "assets" / "figure_early_exit_sweep.png"
-        else:
-            out = args.csv.with_name(f"{args.csv.stem}_sweep.png")
+        out = args.csv.with_name(f"{args.csv.stem}_sweep.png")
 
     out.parent.mkdir(parents=True, exist_ok=True)
 

@@ -48,7 +48,7 @@ if [[ -n "${SWEEP}" && -f "${SWEEP}" ]]; then
   echo "==> Early-exit sweep from ${SWEEP}"
   "${PY}" "${ROOT}/scripts/plot_sweep_csv.py" --csv "${SWEEP}" --out "${OUT}/figure_early_exit_sweep.png"
 else
-  echo "==> No sweep CSV passed; keeping existing figure_early_exit_sweep.png (re-run with 2nd arg to refresh)"
+  echo "==> No sweep CSV passed; skipping sweep figure"
 fi
 
 echo "Done. Figures in ${OUT}/"

@@ -26,7 +26,7 @@ This file tracks the real run history on Vast.ai for the OAT policy lab, includi
 - **Policy training:** stable 30-epoch FP32 run `train30_20260411_134306` under `third_party/oat/output/manual/…`, `logs.json` ~9 MB, `val_loss` tracked per epoch (see `README` / submission doc for metrics narrative).
 - **Simulator eval:** `experiments/runs/eval_libero_7to8h_20260412_112444/eval_log.json` — `mean_success_rate_mean ≈ 0.223` with **`n_test=350`**, `n_parallel_envs=12`, `n_test_vis=0` (shorter than default 500 for wall-clock; metric is an estimate, not comparable to full-500 tables without a separate run).
 - **Artifacts off-instance:** checkpoint + logs + eval pushed to **Hugging Face** (`hackhackhack66666/oat-libero-policy-early-exit`); local **`oat_lab_backup_*.tgz`** on laptop mirrors `latest.ckpt`, `logs.json`, `eval_log.json`.
-- **Figures:** real `logs.json` / `eval_log.json` plotted to `docs/assets/figure_training_curves.png` and `figure_eval_summary.png`; sweep panel may remain **synthetic** until a real `sweep_early_exit.py` CSV exists.
+- **Figures:** real `logs.json` / `eval_log.json` plotted to `docs/assets/figure_training_curves.png` and `figure_eval_summary.png`; sweep plot is omitted in the default README snapshot unless a real `sweep_early_exit.py` CSV is provided.
 
 ## Confirmed Observations
 
