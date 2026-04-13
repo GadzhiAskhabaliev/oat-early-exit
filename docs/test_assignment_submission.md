@@ -27,18 +27,19 @@ The official brief (Part 1: tool survey; Part 2: research + report on BLT / H-Ne
 
 ### 1.2 Mapping to the brief’s tool list (what was actually used)
 
-- **Deep Research [1]** — **not used directly**. For literature search/summarization and hypothesis framing we used **Perplexity (Deep Research mode)**.
-- **Claude Code [2]** — **not used directly**. Code work was done in **Cursor + GPT Codex (latest)**.
+- **Deep Research [1]** — **not used directly**. For literature search/summarization and hypothesis framing we used **Perplexity Deep Research** (**explicit substitute for OpenAI Deep Research**).
+- **Claude Code [2]** — **not used directly**. Core code work was done with **GPT Codex 5.3 in Cursor** (**explicit substitute for Claude Code**).
 - **AutoResearch / AutoResearchClaw [3][4]** — **not used directly**. Instead we used a **manual multi-agent workflow in Cursor** with explicit human checkpoints.
 
 ### 1.3 Practical assistant stack used in this project
 
 | Assistant/tool | Practical role |
 |---|---|
-| **GPT Codex (latest) in Cursor** | Main bug-fix/code-modification loop in the OAT fork, script updates, reproducibility fixes |
-| **Second Cursor agent (automatic model routing)** | Auxiliary agent for docs/formatting/visualization and task-specific model selection to save tokens |
+| **Cursor Agent #1: GPT Codex 5.3** | Primary coding/debugging agent for bug fixes, OAT fork modifications, script updates, and reproducibility fixes |
+| **Cursor Agent #2: main chat (automatic model routing)** | Day-to-day planning, troubleshooting, and task routing with model auto-selection for token efficiency |
+| **Cursor Agent #3: visualization/docs (automatic model routing)** | Dedicated support for report wording, markdown structure, and visualization/format polishing |
 | **DeepSeek** | Train/validation loss log analysis for low-cost iterations |
-| **Perplexity (Deep Research)** | Paper summarization and problem framing before implementation |
+| **Perplexity (Deep Research)** | Paper summarization and research-task framing (**used instead of OpenAI Deep Research**) |
 
 **Part 1 takeaway:** this project used a cost-aware **multi-agent but human-controlled** workflow: coding in Cursor/Codex, low-cost log analysis with DeepSeek, and literature summarization with Perplexity.
 
@@ -93,10 +94,11 @@ Development was intentionally **multi-agent and iterative**, with parallel and i
 
 ### 3.3 Assistant attribution in this project
 
-- Bug fixing and code edits: **GPT Codex (latest) in Cursor**.
-- Auxiliary documentation/formatting/visualization: **second Cursor agent with automatic model routing**.
+- Bug fixing and code edits: **Cursor Agent #1 (GPT Codex 5.3)**.
+- Main task chat/planning: **Cursor Agent #2 (automatic model routing)**.
+- Visualization/docs support: **Cursor Agent #3 (automatic model routing)**.
 - Low-cost loss-log analysis: **DeepSeek**.
-- Literature summarization and framing: **Perplexity Deep Research**.
+- Literature summarization and framing: **Perplexity Deep Research** (**instead of OpenAI Deep Research**).
 
 This disclosure is intentional: tools in the brief were treated as a reference set, while equivalent alternatives were used for cost and workflow reasons.
 
