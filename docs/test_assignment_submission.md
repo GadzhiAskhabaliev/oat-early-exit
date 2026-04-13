@@ -25,13 +25,22 @@ The official brief (Part 1: tool survey; Part 2: research + report on BLT / H-Ne
 | **Vast.ai + SSH + tmux** | Long train/eval without tying to a local laptop | Cheaper than owning a GPU | Unstable SSH, port changes; disk loss risk when the instance stops |
 | **uv + Hydra** (OAT stack) | Env and train/eval configs | Repeatable `override`s | Learning curve: two sources of truth (yaml vs shell) — document explicitly |
 
-### 1.2 Mapping to the brief’s tool list
+### 1.2 Mapping to the brief’s tool list (what was actually used)
 
-- **Deep Research [1]** — good for **broad surveys** and collecting links; here that role was partly covered by **manual arXiv + OAT README** plus targeted chat-LLM prompts.
-- **Claude Code [2]** — conceptually close to **Cursor agent mode**: edits in an existing repo, multi-step tasks. We did not rely on a separate “Claude Code” binary; Cursor Agent + commit discipline sufficed.
-- **AutoResearch / AutoResearchClaw [3][4]** — closed loop “idea → code → experiment”; **not used end-to-end in autopilot** (risk of silent errors on expensive GPU time). Instead we used a **manual loop**: run journal, smoke tests, then long training.
+- **Deep Research [1]** — **not used directly**. For literature search/summarization and hypothesis framing we used **Perplexity (Deep Research mode)**.
+- **Claude Code [2]** — **not used directly**. Code work was done in **Cursor + GPT Codex (latest)**.
+- **AutoResearch / AutoResearchClaw [3][4]** — **not used directly**. Instead we used a **manual multi-agent workflow in Cursor** with explicit human checkpoints.
 
-**Part 1 takeaway:** for an engineering task “fork + patch + LIBERO”, **Cursor + git + remote GPU** is a good fit; keep “auto-research” for literature review, and run critical code/experiments **under control** with logs and checkpoints.
+### 1.3 Practical assistant stack used in this project
+
+| Assistant/tool | Practical role |
+|---|---|
+| **GPT Codex (latest) in Cursor** | Main bug-fix/code-modification loop in the OAT fork, script updates, reproducibility fixes |
+| **Second Cursor agent (automatic model routing)** | Auxiliary agent for docs/formatting/visualization and task-specific model selection to save tokens |
+| **DeepSeek** | Train/validation loss log analysis for low-cost iterations |
+| **Perplexity (Deep Research)** | Paper summarization and problem framing before implementation |
+
+**Part 1 takeaway:** this project used a cost-aware **multi-agent but human-controlled** workflow: coding in Cursor/Codex, low-cost log analysis with DeepSeek, and literature summarization with Perplexity.
 
 ---
 
@@ -67,20 +76,33 @@ This aligns with the **spirit** of BLT/H-Net (do not spend full compute / length
 
 ---
 
-## Part 3. Assistant usage logs
+## Part 3. Assistant usage logs and traceability statement
 
-**Brief requirement:** attach logs of conversations with assistants.
+**Brief requirement:** provide logs/trace of assistant usage.
 
-**What to attach physically:**
+### 3.1 Why raw chat export is not attached
 
-1. **Cursor export** (Chat / Composer / Agent) for the repo work period — PDF or `.md` / `.txt`, next to the report or as an archive link.
-2. **GPU run journal:** [`libero-debug-journal.md`](libero-debug-journal.md) — commands, paths, incidents (SSH, OOM, zero loss, eval), fixes.
+Development was intentionally **multi-agent and iterative**, with parallel and interleaved assistant sessions. In practice, raw transcript dumps are noisy, partially overlapping, and not sequentially aligned with final code states. We therefore do **not** provide raw unstructured chat exports as the primary artifact.
 
-*For a final ZIP to graders:* e.g. `exports/cursor_chat_YYYYMMDD.md` + a copy of `docs/libero-debug-journal.md`.
+### 3.2 What is provided instead (structured evidence)
+
+1. **Primary process log:** [`libero-debug-journal.md`](libero-debug-journal.md) — step-by-step failures, root-cause hypotheses, fixes, commands, and final run outcomes.
+2. **Repository commit history + diffs:** each major fix and documentation pass is traceable via commit messages and file-level changes.
+3. **Executable scripts and reproducible commands:** `scripts/` + `README.md` + this document.
+4. **Final artifacts:** checkpoint/log/eval on Hugging Face and local tar backup (`latest.ckpt`, `logs.json`, `eval_log.json`).
+
+### 3.3 Assistant attribution in this project
+
+- Bug fixing and code edits: **GPT Codex (latest) in Cursor**.
+- Auxiliary documentation/formatting/visualization: **second Cursor agent with automatic model routing**.
+- Low-cost loss-log analysis: **DeepSeek**.
+- Literature summarization and framing: **Perplexity Deep Research**.
+
+This disclosure is intentional: tools in the brief were treated as a reference set, while equivalent alternatives were used for cost and workflow reasons.
 
 ---
 
-## Part 4. Reproduction for graders (“Claude Code” style)
+## Part 4. Reproduction for graders (code-first workflow)
 
 ### 4.1 Clone and environment
 
@@ -164,7 +186,7 @@ See [`early-exit.md`](early-exit.md), `scripts/vast_run_early_exit.sh`, `pytest`
 ## Pre-submission checklist
 
 - [ ] PDF/archive for **Part 1** (tool survey) — can be this file plus extra tables.
-- [ ] **Assistant logs** (Cursor export + `libero-debug-journal.md`).
+- [ ] **Assistant traceability** (`libero-debug-journal.md` + commit history + tool attribution in Part 3).
 - [ ] **Repository** (GitHub link) + this file under `docs/`.
 - [ ] **Report:** Section 5 above + **one paragraph** of personal conclusions at the end of the report as its own block.
 - [ ] **Artifact backup** (`latest.ckpt`, `eval_log.json`, `logs.json`) off the Vast instance. Steps: **“Before you delete the instance”** in root [`README.md`](../README.md) (`tar` → `scp`/`rsync` → laptop `artifacts/`; optional Hugging Face Hub or Zenodo).
